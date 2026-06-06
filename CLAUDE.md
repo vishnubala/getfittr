@@ -324,6 +324,45 @@ api_key = os.getenv("ANTHROPIC_API_KEY")
 - Git: commit after every working feature with a clear message.
 - Never install packages not in requirements.txt without adding them first.
 
+
+---
+
+## Learning Log Rule — MANDATORY, NO EXCEPTIONS
+
+After every completed step — without being asked — append an entry to `LEARNING_LOG.md`
+in the project root. Do this BEFORE the commit so the log is included in the same commit
+as the code it documents.
+
+**Entry format (use this exactly):**
+
+```
+---
+## [Phase X · Step Y] — [short title]
+*[Date]*
+
+### What was built
+[2-3 sentences in plain English. What exists now that didn't before.]
+
+### New terms introduced
+- **[term]**: [plain English definition — assume reader knows basic Python but no web dev]
+[include every new concept, pattern, or tool introduced in this step]
+
+### Why these decisions were made
+[The reasoning behind key architectural choices — not just what, but why.
+Why this approach over alternatives? What problem does each decision solve?]
+
+### What this enables
+[How does this step connect to the next one? What is now possible that wasn't before?]
+```
+
+**Rules:**
+- Never skip this step. Never wait to be asked.
+- Append only — never overwrite earlier entries.
+- Plain English throughout. No assuming prior knowledge of web frameworks.
+- Every new term gets defined, even if it seems obvious.
+- The "why" section is the most important — capture the reasoning, not just the facts.
+
+
 ---
 
 ## Current Build Phase

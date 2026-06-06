@@ -15,3 +15,7 @@ __pycache__/
 
 # OS
 .DS_Store
+
+# Local files
+SESSION_STARTER.md
+LEARNING_LOG.md

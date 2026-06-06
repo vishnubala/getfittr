@@ -1,3 +1,4 @@
+# Deprecated - see pyproject.toml
 fastapi
 uvicorn
 anthropic

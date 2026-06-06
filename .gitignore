@@ -13,9 +13,8 @@ data/chroma/
 __pycache__/
 *.pyc
 
+# uv virtual environment
+.venv/
+
 # OS
 .DS_Store
-
-# Local files
-SESSION_STARTER.md
-LEARNING_LOG.md

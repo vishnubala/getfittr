@@ -322,7 +322,29 @@ api_key = os.getenv("ANTHROPIC_API_KEY")
 - MediaPipe: browser-side only. Never attempt server-side pose processing.
 - Error handling: every API call (Claude, MediaPipe) needs a try/catch or try/except.
 - Git: commit after every working feature with a clear message.
-- Never install packages not in requirements.txt without adding them first.
+
+---
+
+## Python Environment
+
+Package manager: uv (NEVER use pip, pip3, or python -m venv)
+Virtual environment: managed automatically by uv at .venv/
+
+Install all dependencies:     uv sync
+Add a new package:            uv add package-name
+Add a dev-only package:       uv add --dev package-name
+Run any command in env:       uv run <command>
+Run the dev server:           uv run python -m uvicorn backend.main:app --reload
+
+Never manually activate .venv/. Always use uv run.
+Never commit .venv/ — it is gitignored.
+Any new package must be added via uv add (updates pyproject.toml automatically).
+Do not edit pyproject.toml dependencies by hand.
+
+On Windows, Claude Code's terminal may not inherit user PATH.
+Prefix uv commands with:
+$env:PATH = '$env:USERPROFILE\.local\bin;$env:PATH'
+Or use the full uv path found at C:\Users\vishn\.local\bin\uv.exe
 
 
 ---
@@ -331,7 +353,7 @@ api_key = os.getenv("ANTHROPIC_API_KEY")
 
 After every completed step — without being asked — append an entry to `LEARNING_LOG.md`
 in the project root. Do this BEFORE the commit so the log is included in the same commit
-as the code it documents.
+as the code it documents, along with the commit message and ID.
 
 **Entry format (use this exactly):**
 

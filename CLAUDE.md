@@ -387,6 +387,40 @@ Why this approach over alternatives? What problem does each decision solve?]
 
 ---
 
+## Session Starter Update Rule — MANDATORY, NO EXCEPTIONS
+
+Immediately after appending to LEARNING_LOG.md, and still before the commit,
+make surgical edits to SESSION_STARTER.md. Never rewrite the whole file.
+Only touch the sections listed below, and only if they actually changed.
+
+**Section: Current Build Status — update after EVERY step**
+- Mark the just-completed step ✅
+- Move the [ ] marker to the next pending step
+- Update "Last completed" and "Next task" lines with one sentence each
+
+**Section: Key Decisions Locked In — only if a new decision was made this step**
+- Add one bullet line for the new decision
+- Do not reword or remove existing decisions
+- If no new decisions were made: do not touch this section
+
+**Section: Schema Additions — only if the schema changed this step**
+- Add the new field or table with a one-line description
+- If schema did not change: do not touch this section
+
+**Section: Environment — only if tooling changed this step**
+- Edit the affected line only
+- If environment did not change: do not touch this section
+
+**Rules:**
+- Surgical only. If a section did not change, leave it untouched.
+- Never duplicate content from CLAUDE.md — SESSION_STARTER summarises, CLAUDE.md specifies.
+- Keep SESSION_STARTER.md under 80 lines. If it grows beyond that, move detail
+  into CLAUDE.md and replace with a one-line reference here.
+- Never wait to be asked. This runs after LEARNING_LOG, before every commit.
+
+
+---
+
 ## Current Build Phase
 
 ### ✅ PHASE 1 — Foundation (START HERE)

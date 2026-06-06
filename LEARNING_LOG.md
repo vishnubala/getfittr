@@ -235,3 +235,88 @@ reproducible form. When Phase 2 needs the heavy AI packages, they're already
 installed (`chromadb`, `sentence-transformers`, `torch`), and adding anything new is
 a single `uv add`. Anyone cloning the repo gets the identical environment with one
 `uv sync`.
+
+---
+## [Phase 1 · Step 4] — Frontend Shell with Navigation
+*2026-06-06*
+
+### What was built
+The first thing a human actually sees: the app's visual shell. A single
+`index.html` holds all four screens (Dashboard, Workout, History, Profile) at
+once as four `<section>` blocks. A fixed dark-themed top navigation bar switches
+between them, and `app.js` shows exactly one section at a time by toggling a CSS
+class — no page reloads, no extra HTML files. Everything is still placeholder
+text; no real data and no calls to the backend yet. Verified in a browser: all
+four tabs switch cleanly, the active tab highlights teal, the Workout screen
+shows a 16:9 camera placeholder, and nothing breaks at phone width.
+
+### New terms introduced
+- **Single-Page Application (SPA)**: A web app that loads one HTML page once, then
+  swaps what's visible with JavaScript instead of fetching a new page from the
+  server for every screen. Navigation feels instant because nothing reloads. Ours
+  is the simplest possible version: all four screens are already in the page; we
+  just show one and hide the rest.
+- **`<section>`**: An HTML tag that groups a chunk of related content. We use one
+  per screen and give each an `id` (e.g. `id="workout"`) so JavaScript and the
+  nav buttons can target it.
+- **`<nav>`**: An HTML tag for a navigation block. Semantic — it tells browsers
+  and screen readers "these are the app's main links."
+- **CSS class toggling**: Showing/hiding by adding or removing a class name. Our
+  `.section` rule sets `display: none` (hidden); `.section.active` sets
+  `display: block` (shown). JavaScript adds `active` to one section and removes it
+  from the others. The browser repaints instantly.
+- **`classList.toggle(name, condition)`**: A JavaScript method that adds the class
+  `name` when `condition` is true and removes it when false. One line replaces an
+  if/else, and we use it for both the sections and the nav highlight.
+- **`data-*` attribute**: A custom HTML attribute for stashing your own data on an
+  element. Our nav buttons carry `data-section="workout"`, and JavaScript reads it
+  via `link.dataset.section`. It cleanly links a button to the section it opens
+  without hard-coding anything.
+- **Hash-based routing**: Using the part of the URL after `#` (e.g.
+  `...:8000/#workout`) to remember which screen is open. The browser never sends
+  the hash to the server, so it's a free, reload-safe way for a static page to
+  track state. We read it on load (so a direct link to `#workout` opens that
+  screen) and listen for `hashchange` (so the browser Back button works).
+- **`DOMContentLoaded`**: A browser event that fires once the HTML is fully parsed
+  and elements exist. We wait for it before wiring up buttons — otherwise the
+  script might run before the buttons are on the page and find nothing.
+- **CSS custom properties (variables)**: Reusable values declared once under
+  `:root` (e.g. `--accent: #00d4aa`) and referenced everywhere with
+  `var(--accent)`. Change the colour in one place and the whole app updates.
+- **`aspect-ratio: 16 / 9`**: A CSS rule that forces a box to keep a 16-by-9 width
+  to height ratio at any screen size. It keeps the camera placeholder shaped like
+  a video frame whether the window is wide or narrow.
+- **System font stack**: The `font-family` list starting with `-apple-system`. It
+  tells the browser to use whatever clean default font the operating system
+  already ships (San Francisco on Mac, Segoe UI on Windows). No download, no
+  Google Fonts — instant and offline-friendly.
+- **Media query (`@media`)**: A CSS block that applies rules only when a condition
+  is met, here `max-width: 480px` (phone-sized screens). We use it to tighten
+  spacing so the nav and content stay usable on a narrow phone.
+
+### Why these decisions were made
+- **One HTML file, not four**: The spec calls for a single-page app with no build
+  tools. Keeping all sections in one file and toggling visibility means there's no
+  router library, no server round-trip per screen, and the whole app loads once.
+  For a four-screen personal app this is far simpler than separate pages.
+- **CSS class toggle over inline `style.display`**: CLAUDE.md bans inline styles.
+  Toggling a class keeps every visual decision in `style.css` — JavaScript only
+  ever changes *which* class is present, never the styling itself.
+- **Hash routing over a JS-only variable**: Storing the current screen in the URL
+  hash means reloading the page keeps you on the same screen, a direct link to
+  `#workout` works, and the browser's Back/Forward buttons navigate between
+  screens for free. A plain variable would reset on every reload.
+- **CSS variables for the theme**: The dark palette (`#0f0f0f` / `#1a1a1a` /
+  `#00d4aa`) appears in many rules. Defining each once under `:root` means future
+  theme tweaks happen in one place instead of hunting through the stylesheet.
+- **Verified in a real browser, not just by eye**: Loaded the running server in the
+  preview, clicked through all four tabs, and resized to a 375px phone viewport to
+  confirm the layout holds. This matches the build rule of fully testing each step
+  before moving on.
+
+### What this enables
+There is now a real, navigable app surface to hang features on. Step 5 (the
+profile form) and Step 6 (manual session logging) each get a section already
+built and routable — they only need to fill in the placeholder content and wire
+it to the backend. The Workout section's camera box, rep counter, and RPE buttons
+are visible stand-ins that Phases 2 and 3 will make live.

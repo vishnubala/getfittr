@@ -57,7 +57,7 @@ Phase 1 — Foundation:
   ✅ Step 2: database.py (6 tables, 84 exercises seeded)
   ✅ Step 3: main.py (FastAPI skeleton, /health, router structure)
   ✅ Tooling: uv + pyproject.toml, Windows PATH fix
-  [ ] Step 4: Frontend shell (navigation, 4 sections, dark theme)
+  ✅ Step 4: Frontend shell (navigation, 4 sections, dark theme)
   [ ] Step 5: Profile page (backend route + frontend form + equipment selection)
   [ ] Step 6: Manual session log (backend route + frontend UI)
   [ ] Step 7: End-to-end verify
@@ -66,8 +66,8 @@ Phase 2 — AI Coach:   [ ] NOT STARTED
 Phase 3 — The Eyes:   [ ] NOT STARTED
 Phase 4 — Polish:     [ ] NOT STARTED
 
-Last completed: uv migration — pyproject.toml replaces requirements.txt, Windows PATH fix added
-Next task: Phase 1 Step 4 — frontend shell with dark theme and 4-section navigation
+Last completed: Frontend shell — single-page app, 4 sections, hash routing, dark teal theme
+Next task: Phase 1 Step 5 — profile page (backend route + frontend form + equipment selection)
 
 ---
 

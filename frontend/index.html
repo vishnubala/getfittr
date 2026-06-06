@@ -7,13 +7,77 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <header>
-        <h1>GetFittr</h1>
-        <p>Your personal AI workout companion.</p>
-    </header>
+    <!-- Persistent top navigation. Each button targets one section by name. -->
+    <nav class="nav">
+        <span class="nav-brand">GetFittr</span>
+        <div class="nav-links">
+            <button class="nav-link" data-section="dashboard">Dashboard</button>
+            <button class="nav-link" data-section="workout">Workout</button>
+            <button class="nav-link" data-section="history">History</button>
+            <button class="nav-link" data-section="profile">Profile</button>
+        </div>
+    </nav>
 
-    <main id="app">
-        <!-- App shell and navigation are built in a later Phase 1 step. -->
+    <main class="content">
+        <!-- DASHBOARD -->
+        <section id="dashboard" class="section">
+            <h2 class="section-title">Dashboard</h2>
+            <div class="card">
+                <h3>Today's Plan</h3>
+                <p class="muted">No plan yet. The AI coach will generate today's
+                    workout here once Phase 2 is built.</p>
+            </div>
+            <div class="card">
+                <h3>Recent Activity</h3>
+                <p class="muted">Your recent sessions will be summarised here.</p>
+            </div>
+        </section>
+
+        <!-- WORKOUT -->
+        <section id="workout" class="section">
+            <h2 class="section-title">Workout</h2>
+            <div class="camera-box">
+                <div class="camera-placeholder">
+                    <span class="camera-icon" aria-hidden="true">&#128247;</span>
+                    <p>Camera feed will appear here</p>
+                </div>
+            </div>
+            <div class="card">
+                <h3 class="exercise-name">Exercise Name</h3>
+                <p class="coaching-text muted">Coaching cues will appear here during
+                    your set.</p>
+                <div class="rep-counter">
+                    <span class="rep-label">Reps</span>
+                    <span class="rep-count">0</span>
+                </div>
+                <div class="rpe-buttons">
+                    <button class="rpe-btn">&#128524; Easy</button>
+                    <button class="rpe-btn">&#128170; Good</button>
+                    <button class="rpe-btn">&#128548; Hard</button>
+                    <button class="rpe-btn">&#128565; Failed</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- HISTORY -->
+        <section id="history" class="section">
+            <h2 class="section-title">History</h2>
+            <div class="card">
+                <h3>Past Sessions</h3>
+                <p class="muted">Logged sessions will be listed here once session
+                    logging is built.</p>
+            </div>
+        </section>
+
+        <!-- PROFILE -->
+        <section id="profile" class="section">
+            <h2 class="section-title">Profile</h2>
+            <div class="card">
+                <h3>Your Profile</h3>
+                <p class="muted">The profile form will live here. Name, age, goals,
+                    equipment, and injuries.</p>
+            </div>
+        </section>
     </main>
 
     <script src="/static/app.js"></script>

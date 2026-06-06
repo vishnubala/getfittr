@@ -4,7 +4,7 @@
     {
       "name": "getfittr",
       "runtimeExecutable": "C:\\Users\\vishn\\.local\\bin\\uv.exe",
-      "runtimeArgs": ["run", "python", "-m", "uvicorn", "backend.main:app", "--port", "8000"],
+      "runtimeArgs": ["run", "python", "-m", "uvicorn", "backend.main:app", "--reload", "--port", "8000"],
       "port": 8000
     }
   ]

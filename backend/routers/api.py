@@ -18,6 +18,9 @@ declared as ``GET /profile`` in ``profile.py`` is served at ``/api/profile``.
 
 from fastapi import APIRouter
 
+from . import profile
+
 api_router = APIRouter()
 
-# Feature routers will be included here as they are built (see module docstring).
+# Feature routers are included here as they are built (see module docstring).
+api_router.include_router(profile.router, prefix="/profile")

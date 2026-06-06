@@ -320,3 +320,103 @@ profile form) and Step 6 (manual session logging) each get a section already
 built and routable — they only need to fill in the placeholder content and wire
 it to the backend. The Workout section's camera box, rep counter, and RPE buttons
 are visible stand-ins that Phases 2 and 3 will make live.
+
+---
+## [Phase 1 · Step 5] — Profile Page (backend route + frontend form)
+*2026-06-06*
+
+### What was built
+The first end-to-end feature: a real form that reads from and writes to the
+database. The Profile screen now has a four-group form (About You, Your Goals,
+Your Equipment, Schedule & Diet). A new backend file, `backend/routers/profile.py`,
+exposes `GET /api/profile` (returns the saved profile, or 404 before first setup)
+and `POST /api/profile` (saves it). On page load the form fetches the existing
+profile and pre-fills itself; on save it posts the form and shows a success
+message without reloading. Verified live: saved a test profile, reloaded, and
+confirmed every field pre-filled correctly.
+
+### New terms introduced
+- **API endpoint / route**: A specific URL the backend answers, paired with an HTTP
+  method. `GET /api/profile` (read) and `POST /api/profile` (write) are two
+  endpoints sharing one URL but doing different things based on the method.
+- **HTTP method (GET vs POST)**: GET asks the server for data and changes nothing;
+  POST sends data to the server to create or update something. The browser's
+  `fetch()` defaults to GET; we pass `method: "POST"` to write.
+- **Upsert**: "Update or insert" in one operation. If the profile row already
+  exists we overwrite it; if not, we create it. SQLite does this with
+  `INSERT ... ON CONFLICT(id) DO UPDATE`, which tries to insert and, if a row with
+  that primary key already exists, updates it instead. We always use `id = 1`
+  because there is only ever one user.
+- **HTTP status code**: A number the server returns describing the outcome. `200`
+  = success, `404` = not found (we return this when no profile exists yet),
+  `422` = the data sent failed validation. The frontend branches on these.
+- **Pydantic model**: A Python class (in `backend/models.py`) describing the exact
+  shape of the JSON a request must contain or a response will return. FastAPI uses
+  it to automatically validate incoming data (rejecting bad input with a 422) and
+  to document the API. `ProfileIn` is what the client sends; `ProfileOut` is what
+  we send back (it adds server-managed fields like `id` and timestamps).
+- **`response_model`**: A FastAPI setting that filters and validates what a route
+  returns against a Pydantic model, so the JSON shape is guaranteed and consistent.
+- **`Depends(get_db)`**: FastAPI's dependency injection. Declaring `db=Depends(get_db)`
+  as a parameter tells FastAPI to call `get_db()` for you, hand the database
+  connection to the function, and close it afterwards — no manual open/close in
+  every route.
+- **JSON-encoded column**: SQLite has no "list" column type, so list fields (goals,
+  injuries, rest_days, equipment) are stored as a JSON string with `json.dumps()`
+  on the way in and turned back into a Python list with `json.loads()` on the way
+  out. The router does this translation so the rest of the app sees real lists.
+- **`fetch()`**: The browser's built-in function for making HTTP requests from
+  JavaScript. Returns a Promise (an eventual result), so we `await` it. This is how
+  the frontend talks to the backend without reloading the page.
+- **`async` / `await`**: JavaScript keywords for handling operations that take time
+  (like a network request). `await fetch(...)` pauses the function until the
+  response arrives, then continues — letting us write asynchronous code that reads
+  top-to-bottom like normal code.
+- **`event.preventDefault()`**: By default, submitting an HTML form reloads the page
+  by sending it to the server the old-fashioned way. Calling this on the submit
+  event cancels that, so our JavaScript can handle the save with `fetch()` and the
+  page stays put.
+- **Radio button vs checkbox**: Radios in the same group are mutually exclusive
+  (pick one fitness level); checkboxes allow many (pick several goals or pieces of
+  equipment). We read radios with `:checked` (one value) and checkboxes by
+  collecting all `:checked` boxes into an array.
+- **`:has()` CSS selector**: A newer CSS feature that styles an element based on
+  what's inside it. `.pill:has(input:checked)` highlights a whole pill when its
+  hidden radio/checkbox is checked — no JavaScript needed for the visual state.
+- **Toggle switch (CSS)**: The on/off slider for diet tracking is just a styled
+  checkbox: the real `<input>` is hidden and a `<span class="slider">` is animated
+  with CSS based on the checkbox's `:checked` state.
+
+### Why these decisions were made
+- **404 instead of an empty object for a missing profile**: A 404 lets the frontend
+  cleanly tell "first-time setup, leave the form blank" apart from "a saved profile
+  exists, pre-fill it." An empty `{}` would be ambiguous and force guessing.
+- **Single row at `id = 1` with upsert**: This is a one-user app, so the profile is
+  a singleton. Pinning it to `id = 1` and upserting means there's never a question
+  of "which profile" or accidental duplicates — saving always targets the same row.
+- **Separate `ProfileIn` and `ProfileOut` models**: The client shouldn't send
+  server-managed fields (`id`, `created_at`, `updated_at`), and `name`/`fitness_level`
+  are required on input but always present on output. Two models express those
+  different contracts cleanly instead of one loose model with everything optional.
+- **`created_at` preserved across updates**: On every save we read the existing
+  `created_at` and keep it, only bumping `updated_at`. This keeps an honest record
+  of when the profile was first created versus last changed.
+- **Equipment exclusivity handled in JavaScript**: "No equipment" contradicts every
+  other option, so selecting it clears the others and vice versa. Doing this on the
+  `change` event gives immediate, obvious feedback rather than rejecting a
+  contradictory combination only after submit.
+- **Validation on both ends**: The frontend blocks submit if name or fitness level
+  is missing (instant feedback, no wasted request); Pydantic also requires them on
+  the backend (the database is never the weak link even if the frontend is bypassed).
+- **`launch.json` gained `--reload`**: The dev server was running without
+  auto-reload, so backend edits weren't taking effect until a manual restart (this
+  caused the new route to 404 during testing). Adding `--reload` brings it in line
+  with the documented run command so future `.py` edits apply immediately.
+
+### What this enables
+The app now has a complete read/write loop between browser, backend, and database —
+the pattern every remaining feature reuses. The saved profile (goals, injuries,
+equipment, rest days, fitness level) is exactly the input Phase 2's AI coach needs
+to generate a personalised, equipment-aware, injury-safe workout plan. Step 6
+(manual session logging) follows the same `fetch` + router + upsert shape proven
+here.

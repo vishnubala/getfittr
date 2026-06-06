@@ -2,7 +2,7 @@
 name = "getfittr"
 version = "0.1.0"
 description = "Personal local AI workout coaching app (pose analysis + Claude + RAG)"
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 dependencies = [
     "anthropic>=0.107.0",
     "chromadb>=1.5.9",

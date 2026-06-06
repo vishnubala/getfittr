@@ -1,4 +1,4 @@
-\# GymCoach — Personal AI Workout Companion
+\# getfittr — Personal AI Workout Companion
 
 
 
@@ -60,7 +60,7 @@ No authentication. No deployment. No public access. One user only.
 
 ```
 
-gymcoach/
+getfittr/
 
 ├── CLAUDE.md                  ← You are here
 
@@ -98,7 +98,7 @@ gymcoach/
 
 ├── data/
 
-│   ├── gymcoach.db            ← SQLite database (gitignored)
+│   ├── getfittr.db            ← SQLite database (gitignored)
 
 │   ├── knowledge/             ← Plain text fitness docs for RAG indexing
 
@@ -658,7 +658,7 @@ api\_key = os.getenv("ANTHROPIC\_API\_KEY")
 
 \- \[ ] Write requirements.txt (fastapi, uvicorn, anthropic, chromadb, sentence-transformers, python-dotenv)
 
-\- \[ ] Write .gitignore (gymcoach.db, chroma/, .env, \_\_pycache\_\_, \*.pyc)
+\- \[ ] Write .gitignore (getfittr.db, chroma/, .env, \_\_pycache\_\_, \*.pyc)
 
 \- \[ ] Build database.py: create all 6 tables on startup
 
@@ -746,3 +746,12 @@ api\_key = os.getenv("ANTHROPIC\_API\_KEY")
 
 \*\*Phase 4 done:\*\* The app speaks coaching cues aloud, shows me a progress chart over time, and the full daily experience feels like a real coaching session.
 
+
+## Change Log
+[Add entries here when decisions change]
+- YYYY-MM-DD: Changed X because Y
+
+## Pending Ideas (don't build yet)
+[Dump ideas here during active sessions — revisit between phases]
+- Idea: ...
+- Idea: ...

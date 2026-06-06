@@ -1,0 +1,17 @@
+# Database
+getfittr.db
+data/getfittr.db
+
+# Vector store
+chroma/
+data/chroma/
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store

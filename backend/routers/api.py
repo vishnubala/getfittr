@@ -18,9 +18,12 @@ declared as ``GET /profile`` in ``profile.py`` is served at ``/api/profile``.
 
 from fastapi import APIRouter
 
-from . import profile
+from . import profile, sessions
 
 api_router = APIRouter()
 
 # Feature routers are included here as they are built (see module docstring).
 api_router.include_router(profile.router, prefix="/profile")
+# sessions routes already carry their full paths (/exercises, /sessions), so
+# they mount with no sub-prefix -> /api/exercises, /api/sessions, ...
+api_router.include_router(sessions.router)

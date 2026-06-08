@@ -41,12 +41,15 @@ Short version: MediaPipe.js pose analysis + Claude API coaching + RAG fitness kn
 - Exercise library: 84 exercises (strength 58, skill 7, pilates 7, mobility 6, cardio 6)
 - Pilates/mobility/cardio: standalone rows, consistency tracking only (no rep progression)
 - Profile onboarding includes equipment selection step
+- Session logging: custom searchable exercise picker (not a <select>); built incrementally via create-session → add-sets → end-session endpoints
+- Static assets served no-cache (NoCacheStaticFiles) so edits always show on reload
 
 ## Schema Additions vs Original Spec
 <!-- SECTION: Schema Additions — append only when schema changes -->
 - exercises.movement_type: 'strength'|'pilates'|'mobility'|'cardio'|'skill'
 - exercises.equipment_needed: 'none'|'pullup_bar'|'low_bar'|'anchor'|'parallel_bars'
 - user_profile.available_equipment: JSON array set during onboarding
+- exercises.image_url: nullable SVG path, added via ALTER TABLE migration in init_db()
 
 ---
 
@@ -59,15 +62,15 @@ Phase 1 — Foundation:
   ✅ Tooling: uv + pyproject.toml, Windows PATH fix
   ✅ Step 4: Frontend shell (navigation, 4 sections, dark theme)
   ✅ Step 5: Profile page (GET/POST /api/profile, 4-group form, equipment exclusivity)
-  [ ] Step 6: Manual session log (backend route + frontend UI)
+  ✅ Step 6: Manual session log (exercises endpoint, session/set routes, history UI)
   [ ] Step 7: End-to-end verify
 
 Phase 2 — AI Coach:   [ ] NOT STARTED
 Phase 3 — The Eyes:   [ ] NOT STARTED
 Phase 4 — Polish:     [ ] NOT STARTED
 
-Last completed: Profile page — GET/POST /api/profile upsert (id=1), form pre-fills on load, saves without reload
-Next task: Phase 1 Step 6 — manual session log (backend route + frontend UI)
+Last completed: Manual session log — /api/exercises + session/set CRUD routes, History UI with custom searchable picker, verified end-to-end
+Next task: Phase 1 Step 7 — end-to-end verification of the full Phase 1 flow
 
 ---
 

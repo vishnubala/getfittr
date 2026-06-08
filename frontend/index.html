@@ -61,11 +61,37 @@
 
         <!-- HISTORY -->
         <section id="history" class="section">
-            <h2 class="section-title">History</h2>
-            <div class="card">
-                <h3>Past Sessions</h3>
-                <p class="muted">Logged sessions will be listed here once session
-                    logging is built.</p>
+            <div class="section-header">
+                <h2 class="section-title">History</h2>
+                <button id="open-log-btn" class="btn-primary">+ Log a Session</button>
+            </div>
+
+            <div id="session-list"><!-- populated by JS --></div>
+
+            <!-- Session log panel (hidden by default) -->
+            <div id="session-log-panel" class="side-panel hidden">
+                <div class="panel-header">
+                    <h3>Log a Session</h3>
+                    <button id="close-log-btn" class="btn-icon">&times;</button>
+                </div>
+                <div class="panel-body">
+                    <label class="panel-field">Date
+                        <input type="date" id="session-date">
+                    </label>
+                    <div id="exercises-area"></div>
+                    <button id="add-exercise-btn" class="btn-secondary">+ Add Exercise</button>
+                    <p id="log-error" class="form-status error"></p>
+                    <button id="save-session-btn" class="btn-primary">Save Session</button>
+                </div>
+            </div>
+
+            <!-- Session detail panel (hidden by default) -->
+            <div id="session-detail-panel" class="side-panel hidden">
+                <div class="panel-header">
+                    <h3 id="detail-title"></h3>
+                    <button id="close-detail-btn" class="btn-icon">&times;</button>
+                </div>
+                <div id="detail-body" class="panel-body"></div>
             </div>
         </section>
 
@@ -200,5 +226,6 @@
     </main>
 
     <script src="/static/app.js"></script>
+    <script src="/static/session.js"></script>
 </body>
 </html>

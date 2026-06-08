@@ -416,6 +416,19 @@ def init_db():
     try:
         conn.executescript(SCHEMA)
         seed_exercises(conn)
+
+        # Lightweight migrations for columns added after the table first shipped.
+        # Each runs once; re-running on an already-migrated DB raises and is
+        # skipped silently (SQLite has no "ADD COLUMN IF NOT EXISTS").
+        migrations = [
+            "ALTER TABLE exercises ADD COLUMN image_url TEXT",
+        ]
+        for sql in migrations:
+            try:
+                conn.execute(sql)
+            except Exception:
+                pass  # column already exists — skip silently
+
         conn.commit()
     finally:
         conn.close()

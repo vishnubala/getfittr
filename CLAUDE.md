@@ -94,6 +94,7 @@ CREATE TABLE exercises (
     next_exercise_id INTEGER,  -- Next variation in tree (NULL = last/standalone)
     movement_type TEXT DEFAULT 'strength',  -- 'strength','pilates','mobility','cardio','skill'
     equipment_needed TEXT DEFAULT 'none',   -- 'none','pullup_bar','low_bar','anchor','parallel_bars'
+    image_url TEXT,            -- relative path to SVG line-art for exercise (NULL until populated)
     form_cues TEXT,            -- JSON array of coaching cues
     FOREIGN KEY (parent_exercise_id) REFERENCES exercises(id),
     FOREIGN KEY (next_exercise_id) REFERENCES exercises(id)
@@ -521,9 +522,28 @@ This project doubles as a portfolio piece demonstrating:
   Only 'strength'/'skill' use the 3×8 progression threshold; pilates/mobility/
   cardio are tracked for consistency & quality, not rep-based advancement.
   Seeded in backend/database.py.
+- 2026-06-08: Added `exercises.image_url TEXT` (nullable). Stores relative path to SVG
+  line-art for each exercise. NULL until artwork is populated. Requires ALTER TABLE
+  migration in database.py init_db(). Column sits between equipment_needed and form_cues.
 
 ## Pending Ideas
 [Dump ideas here mid-session — review between phases, not during them]
+- Phase 3 layout: overlay coaching text + rep counter directly
+  on the camera feed (bottom-left and top-right of the video frame).
+  RPE buttons remain below feed — only tapped between sets, not mid-rep.
+- Phase 4 stretch: movement-pattern-based exercise suggestion ("Looks like push-ups?")
+  using MediaPipe trajectory classification — assisted ID, not automatic.
+  Full auto-identification without user confirmation is a major future release.
+- Phase 4: full-screen modal exercise picker — grid view grouped by category with filter
+  tabs and search bar. Better UX once the library grows beyond ~100 exercises, and for
+  gym-mode where the full equipment range is available. Replaces the inline combobox.
+- Phase 4: evaluate library-based select (Tom Select or Choices.js) for the exercise
+  picker if the custom combobox becomes hard to maintain or needs image thumbnails,
+  keyboard navigation, or multi-select. Both are lightweight CDN imports. Would require
+  relaxing the no-external-library rule for this one component — weigh at Phase 4.
+- Phase 4 / voice.js: voice-triggered exercise selection — user says "add push-up"
+  mid-session, app matches against the exercise library and auto-selects. Integrates
+  with the Web Speech API already planned in voice.js. Useful when hands are occupied.
 
 ---
 
@@ -536,13 +556,3 @@ This project doubles as a portfolio piece demonstrating:
 **Phase 3 done:** I can start a push-up set, have the camera count reps, flag my form in real time, and have that data automatically saved to the session.
 
 **Phase 4 done:** The app speaks coaching cues aloud, shows me a progress chart over time, and the full daily experience feels like a real coaching session.
-
-
-## Change Log
-[Add entries here when decisions change]
-- YYYY-MM-DD: Changed X because Y
-
-## Pending Ideas (don't build yet)
-[Dump ideas here during active sessions — revisit between phases]
-- Idea: ...
-- Idea: ...

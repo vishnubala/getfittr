@@ -21,6 +21,21 @@ from .routers.api import api_router
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
+class NoCacheStaticFiles(StaticFiles):
+    """StaticFiles that tells the browser never to cache assets.
+
+    Plain StaticFiles sends no Cache-Control header, so browsers fall back to
+    heuristic caching and keep serving an old style.css/app.js after you edit
+    it. For a local single-user dev app we always want the latest file, so we
+    force revalidation on every request.
+    """
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Create and seed the database before the app starts serving requests."""
@@ -60,8 +75,11 @@ def health():
 
 @app.get("/")
 def index():
-    """Serve the frontend shell."""
-    return FileResponse(FRONTEND_DIR / "index.html")
+    """Serve the frontend shell (uncached so edits show up on reload)."""
+    return FileResponse(
+        FRONTEND_DIR / "index.html",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
 
 
 # Feature endpoints (profile, sessions, coach) attach to api_router; see
@@ -70,4 +88,4 @@ app.include_router(api_router, prefix="/api")
 
 # Mounted last so it doesn't shadow "/" or "/health". Static assets (style.css,
 # app.js, pose.js, voice.js) are reachable at /static/...
-app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+app.mount("/static", NoCacheStaticFiles(directory=FRONTEND_DIR), name="static")

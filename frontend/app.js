@@ -33,6 +33,14 @@ function showSection(name) {
     if (window.location.hash !== "#" + name) {
         window.location.hash = name;
     }
+
+    // History is data-driven: (re)load the session list when it's revealed.
+    // session.js exposes these on window and may not have loaded yet on the
+    // very first call, hence the typeof guard.
+    if (name === "history" && typeof window.loadSessions === "function") {
+        window.loadExercises();
+        window.loadSessions();
+    }
 }
 
 // Read the current hash (e.g. "#workout") and return the bare section name.

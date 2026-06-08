@@ -420,3 +420,107 @@ equipment, rest days, fitness level) is exactly the input Phase 2's AI coach nee
 to generate a personalised, equipment-aware, injury-safe workout plan. Step 6
 (manual session logging) follows the same `fetch` + router + upsert shape proven
 here.
+---
+## [Phase 1 · Step 6] — Manual session log
+*2026-06-08*
+
+### What was built
+The History screen is now a working feature instead of a placeholder. You can
+click "+ Log a Session", search the 84-exercise library through a custom
+type-to-filter picker (no dropdown), add exercises with sets, reps (or hold
+seconds), and an RPE per set, then save the whole session to the database. Saved
+sessions appear as cards in a list (newest first) with exercise and set counts,
+and each can be expanded into a detail panel showing every set grouped by
+exercise. A new backend file, `backend/routers/sessions.py`, exposes the
+exercise library and full session/set lifecycle; a new frontend file,
+`frontend/session.js`, holds all the logging UI logic. Verified live end-to-end:
+logged multi-exercise sessions, viewed them, confirmed date sorting, reload
+persistence, and that saving with a missing RPE is blocked before any API call.
+
+### New terms introduced
+- **Database migration**: A controlled change to an existing database's structure
+  after it already holds data. We needed to add an `image_url` column to the
+  `exercises` table without dropping and re-seeding it. SQLite has no
+  "ADD COLUMN IF NOT EXISTS", so we run `ALTER TABLE ... ADD COLUMN` inside a
+  `try/except` that silently skips if the column is already there — safe to run on
+  every startup.
+- **Path parameter**: A value baked into the URL itself, like the `42` in
+  `/api/sessions/42/sets`. FastAPI captures it by declaring `session_id: int` in
+  the function signature and matching the `{session_id}` placeholder in the route.
+  Used to say "add a set to *this specific* session."
+- **SQL JOIN**: A query that stitches two tables together on a shared key. A logged
+  set only stores an `exercise_id` (a number); to show the exercise's *name* we
+  JOIN `session_sets` to `exercises` on that id, so one query returns the set data
+  plus the human-readable name.
+- **Aggregate function (COUNT / COUNT DISTINCT)**: SQL maths over many rows.
+  `COUNT(*)` counts all a session's sets; `COUNT(DISTINCT exercise_id)` counts how
+  many *different* exercises were used. Combined with `GROUP BY s.id`, this gives
+  each session its "2 exercises · 4 sets" summary in a single query.
+- **LEFT JOIN**: Like a JOIN but keeps rows from the left table even when the right
+  side has no match. We LEFT JOIN sessions to their sets so a brand-new session
+  with zero sets still appears in the list (with counts of 0) instead of vanishing.
+- **Module-level cache**: A variable (`exerciseCache`) that lives for the whole page
+  session and holds the exercise library after one fetch. Searching then filters
+  this in-memory list on every keystroke — instant, with no network call per key.
+- **Client-side filtering**: Doing the search in the browser against cached data
+  rather than asking the server each time. Fast and offline-friendly for a fixed
+  84-item list; the server-side `?q=` search still exists for completeness.
+- **DOM element creation in JS**: Building interface pieces from JavaScript with
+  `document.createElement(...)` and `.appendChild(...)` instead of writing them in
+  HTML. The search widget, exercise blocks, and set rows are all created on the fly
+  as the user adds them, because their number isn't known ahead of time.
+- **`.replaceWith()`**: A DOM method that swaps one element for another in place.
+  When you pick an exercise from the search dropdown, the search widget calls
+  `.replaceWith(exerciseBlock)` to turn itself into the selected exercise's block.
+- **Cache-Control HTTP header**: A header telling the browser how long it may reuse a
+  downloaded file. FastAPI's static file server sends none, so browsers fall back to
+  *heuristic caching* and keep serving an old `style.css`/`app.js` after you edit it.
+  We added `Cache-Control: no-cache, no-store, must-revalidate` so the latest file
+  is always fetched — important for a local dev app you edit constantly.
+- **Subclassing to override behaviour**: `NoCacheStaticFiles` extends Starlette's
+  `StaticFiles` and overrides one method (`file_response`) to stamp the no-cache
+  header on every static response, reusing all the parent's logic otherwise.
+- **Toast notification**: A small message that slides in, lingers ~2s, then fades —
+  used for "Session saved ✓". Created once and reused, it confirms an action
+  without a blocking pop-up the user must dismiss.
+
+### Why these decisions were made
+- **Custom search widget instead of a `<select>` dropdown**: An 84-item native
+  dropdown is painful to scan and can't show emoji icons or category badges. A
+  text input that filters as you type, with iconned results, scales better and is
+  the groundwork for the richer picker planned in Phase 4.
+- **Session built incrementally over several requests (create → add sets → end)**
+  rather than one big payload: It mirrors how a live workout actually unfolds (you
+  start a session, log sets as you go, finish it) and reuses the exact same backend
+  endpoints Phase 2/3 will call during a real coached session — manual logging is
+  just the same flow driven by hand. `manually_entered = 1` marks these as
+  backfilled so later analytics can tell typed-in history from camera sessions.
+- **`duration_seconds` vs `reps_completed` chosen by movement type**: Holds (planks,
+  mobility) are measured in seconds, strength work in reps. The set row shows the
+  right field automatically (pilates/mobility → seconds, everything else → reps) so
+  the data matches how each exercise is actually performed.
+- **Validate before any network call**: `collectSessionData()` checks there's an
+  exercise, a set, and an RPE on every set *before* creating anything. This avoids
+  leaving a half-saved empty session in the database when the form is incomplete,
+  and gives the user an instant inline error.
+- **Don't cache an empty result on fetch failure**: The first attempt to load the
+  library can fail if it fires while the dev server is mid-restart. Caching `[]`
+  then would break search silently until a reload. Leaving the cache unset on error
+  means the next action (opening the log panel) simply retries — a small change that
+  removes a confusing failure mode found during live testing.
+- **No-cache static files**: Discovered during verification that the browser kept
+  running an old `app.js`/`style.css` after edits, making fixes appear not to work.
+  Rather than fight the cache per-test, fixing it at the source makes every future
+  edit reliably show up on reload — the right call for a local single-user app.
+- **`formatDate` parses `YYYY-MM-DD` as local time**: `new Date("2026-06-08")` is
+  interpreted as UTC midnight and displays as the *previous* day in timezones west
+  of UTC. Caught this live (a Monday showing as Sunday). Parsing the date parts by
+  hand into a local `Date` fixes the off-by-one.
+
+### What this enables
+Phase 1 is now functionally complete: profile in, sessions logged and viewable
+back — the full "fill profile → log a workout → see it listed" loop the phase set
+out to deliver. The session/set tables now hold real training data, which is the
+raw material Phase 2's AI coach reads to spot progression readiness and plan the
+next workout, and the same create/add-sets/end endpoints will be driven live (not
+by hand) once camera-based logging arrives in Phase 3.

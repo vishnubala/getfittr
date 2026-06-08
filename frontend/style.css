@@ -382,6 +382,352 @@ textarea {
     color: #ff6b6b;
 }
 
+/* ---- History: session logging (Phase 1, Step 6) ---- */
+
+/* Header row: title left, "+ Log a Session" button right. */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.section-header .section-title {
+    margin-bottom: 0;
+}
+
+/* Slide-over panel for logging / viewing a session. */
+.side-panel {
+    position: fixed;
+    top: var(--nav-height);
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 460px;
+    background: var(--card);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    z-index: 20;
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.4);
+}
+
+.side-panel.hidden {
+    display: none;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--card);
+}
+
+.panel-header h3 {
+    font-size: 1.2rem;
+}
+
+.panel-body {
+    padding: 1.25rem;
+}
+
+.panel-field {
+    display: block;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.panel-field input[type="date"] {
+    display: block;
+    margin-top: 0.4rem;
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font: inherit;
+    padding: 0.55rem 0.65rem;
+    border-radius: 8px;
+}
+
+.panel-field input[type="date"]:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* Searchable exercise picker. */
+.exercise-search-widget {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.exercise-search-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font: inherit;
+    padding: 0.55rem 0.65rem;
+    border-radius: 8px;
+}
+
+.exercise-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.exercise-results-dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 2px);
+    list-style: none;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 5;
+}
+
+.exercise-results-dropdown.hidden {
+    display: none;
+}
+
+.exercise-results-dropdown li {
+    padding: 0.5rem 0.65rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+}
+
+.exercise-results-dropdown li:last-child {
+    border-bottom: none;
+}
+
+.exercise-results-dropdown li:hover {
+    background: rgba(0, 212, 170, 0.12);
+}
+
+/* A selected exercise with its set rows. */
+.exercise-block {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.85rem;
+    margin-bottom: 1rem;
+    background: var(--bg);
+}
+
+.exercise-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.65rem;
+    font-weight: 600;
+}
+
+.set-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.set-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.set-label {
+    font-size: 0.85rem;
+    color: var(--muted);
+    min-width: 44px;
+}
+
+.set-row .reps-input,
+.set-row .duration-input {
+    width: 72px;
+    flex: 0 0 auto;
+    padding: 0.4rem 0.5rem;
+}
+
+/* RPE pill buttons inside a set row. Scoped under .rpe-group so they override
+   the workout-section .rpe-btn flex/min-width rules above. */
+.rpe-group {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.rpe-group .rpe-btn {
+    flex: 0 0 auto;
+    min-width: 0;
+    font-size: 1.2em;
+    line-height: 1;
+    padding: 0.3rem 0.45rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.rpe-group .rpe-btn:hover {
+    border-color: var(--accent);
+}
+
+.rpe-group .rpe-btn.selected {
+    border-color: var(--accent);
+    background: rgba(0, 212, 170, 0.18);
+}
+
+/* Secondary / text / icon buttons. */
+.btn-secondary {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font: inherit;
+    font-weight: 600;
+    padding: 0.55rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-right: 0.5rem;
+    transition: background 0.15s;
+}
+
+.btn-secondary:hover {
+    background: rgba(0, 212, 170, 0.12);
+}
+
+.btn-text {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font: inherit;
+    padding: 0.25rem 0;
+    cursor: pointer;
+}
+
+.btn-text:hover {
+    text-decoration: underline;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.3rem;
+    line-height: 1;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+}
+
+.btn-icon:hover {
+    color: var(--text);
+    background: var(--border);
+}
+
+/* Session list cards. */
+.session-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.75rem;
+    transition: border-color 0.15s;
+}
+
+.session-card:hover {
+    border-color: var(--accent);
+}
+
+.session-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.35rem;
+}
+
+.session-card-date {
+    font-weight: 600;
+}
+
+.session-card-stats {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Small coloured tag for movement type / session type. */
+.movement-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(0, 212, 170, 0.12);
+    color: var(--accent);
+    text-transform: capitalize;
+}
+
+.movement-badge.strength { background: rgba(0, 212, 170, 0.14); color: #2fe0bd; }
+.movement-badge.skill    { background: rgba(255, 209, 102, 0.16); color: #ffd166; }
+.movement-badge.pilates  { background: rgba(155, 140, 255, 0.16); color: #b3a7ff; }
+.movement-badge.mobility { background: rgba(102, 204, 255, 0.16); color: #66ccff; }
+.movement-badge.cardio   { background: rgba(255, 107, 107, 0.16); color: #ff8787; }
+
+/* Session detail panel. */
+.detail-exercise {
+    margin-bottom: 1.1rem;
+}
+
+.detail-exercise h4 {
+    font-size: 1rem;
+    margin-bottom: 0.35rem;
+}
+
+.detail-set-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.detail-set-list li {
+    padding: 0.3rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.92rem;
+    color: var(--text);
+}
+
+.detail-set-list li:last-child {
+    border-bottom: none;
+}
+
+/* Toast notification. */
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 1.5rem;
+    transform: translateX(-50%) translateY(1rem);
+    background: var(--card);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    padding: 0.7rem 1.25rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 30;
+}
+
+.toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
 /* ---- Responsive: single column already; tighten spacing on phones ---- */
 @media (max-width: 480px) {
     .nav {

@@ -43,6 +43,7 @@ Short version: MediaPipe.js pose analysis + Claude API coaching + RAG fitness kn
 - Profile onboarding includes equipment selection step
 - Session logging: custom searchable exercise picker (not a <select>); built incrementally via create-session → add-sets → end-session endpoints
 - Static assets served no-cache (NoCacheStaticFiles) so edits always show on reload
+- Phase 2: upfront single-call planning (not reactive per-set); build 2a (no RAG) then 2b (Chroma RAG, all-MiniLM-L6-v2). Full plan in CLAUDE.md
 
 ## Schema Additions vs Original Spec
 <!-- SECTION: Schema Additions — append only when schema changes -->
@@ -55,7 +56,7 @@ Short version: MediaPipe.js pose analysis + Claude API coaching + RAG fitness kn
 
 ## Current Build Status
 <!-- SECTION: Build Status — update after EVERY step -->
-Phase 1 — Foundation:
+✅ PHASE 1 COMPLETE
   ✅ Step 1: Project scaffold (folders, pyproject.toml, .gitignore)
   ✅ Step 2: database.py (6 tables, 84 exercises seeded)
   ✅ Step 3: main.py (FastAPI skeleton, /health, router structure)
@@ -63,14 +64,14 @@ Phase 1 — Foundation:
   ✅ Step 4: Frontend shell (navigation, 4 sections, dark theme)
   ✅ Step 5: Profile page (GET/POST /api/profile, 4-group form, equipment exclusivity)
   ✅ Step 6: Manual session log (exercises endpoint, session/set routes, history UI)
-  [ ] Step 7: End-to-end verify
+  ✅ Step 7: Close-out — Phase 2 architecture locked, final smoke test passed
 
-Phase 2 — AI Coach:   [ ] NOT STARTED
+Phase 2 — AI Coach:   [ ] NOT STARTED (build 2a coaching, then 2b RAG — see CLAUDE.md)
 Phase 3 — The Eyes:   [ ] NOT STARTED
 Phase 4 — Polish:     [ ] NOT STARTED
 
-Last completed: Manual session log — /api/exercises + session/set CRUD routes, History UI with custom searchable picker, verified end-to-end
-Next task: Phase 1 Step 7 — end-to-end verification of the full Phase 1 flow
+Last completed: Phase 1 closed out — Phase 2 architecture locked in CLAUDE.md, final smoke test passed (health, all sections, profile persistence, session log/view)
+Next task: Phase 2a Step 1 — .env + ANTHROPIC_API_KEY, uv add anthropic python-dotenv
 
 ---
 

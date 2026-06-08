@@ -424,25 +424,22 @@ Only touch the sections listed below, and only if they actually changed.
 
 ## Current Build Phase
 
-### ✅ PHASE 1 — Foundation (START HERE)
-- [ ] Create folder structure and all empty files
-- [ ] Write requirements.txt (fastapi, uvicorn, anthropic, chromadb, sentence-transformers, python-dotenv)
-- [ ] Write .gitignore (getfittr.db, chroma/, .env, __pycache__, *.pyc)
-- [ ] Build database.py: create all 6 tables on startup
-- [ ] Build main.py: FastAPI app with /health endpoint
-- [ ] Build basic frontend shell (index.html, style.css): navigation + placeholder pages
-- [ ] Build profile page: create/edit user profile, POST to /api/profile
-- [ ] Build manual session log: add past workout sessions without camera
-- [ ] Verify: can create profile, log a session, view it back
+### ✅ PHASE 1 — Foundation (COMPLETE)
+- [x] Create folder structure and all empty files
+- [x] Write requirements.txt (fastapi, uvicorn, anthropic, chromadb, sentence-transformers, python-dotenv)
+- [x] Write .gitignore (getfittr.db, chroma/, .env, __pycache__, *.pyc)
+- [x] Build database.py: create all 6 tables on startup
+- [x] Build main.py: FastAPI app with /health endpoint
+- [x] Build basic frontend shell (index.html, style.css): navigation + placeholder pages
+- [x] Build profile page: create/edit user profile, POST to /api/profile
+- [x] Build manual session log: add past workout sessions without camera
+- [x] Verify: can create profile, log a session, view it back
 
 ### ⏳ PHASE 2 — AI Coach (after Phase 1 passes verification)
-- [ ] seed_knowledge.py: chunk fitness docs, embed, store in Chroma
-- [ ] rag.py: retrieve relevant chunks by query
-- [ ] coach.py: Claude API call with RAG context injection
-- [ ] /api/plan endpoint: generate today's workout from profile + history + RAG
-- [ ] /api/feedback endpoint: post-session coaching summary
-- [ ] RPE input after each set (UI + backend)
-- [ ] Progression engine: flag exercises ready for variation upgrade
+Build order is 2a (coaching, no RAG) then 2b (add Chroma RAG). Full step-by-step
+plan in the "## Phase 2 — AI Coach" section below.
+- [ ] Phase 2a: coach.py + /api/coach/plan + per-set coaching + post-session summary
+- [ ] Phase 2b: knowledge docs + ingest.py + Chroma retrieval wired into coach.py
 - [ ] Verify: app plans a workout, gives feedback, tracks RPE over time
 
 ### ⏳ PHASE 3 — The Eyes (after Phase 2 passes verification)
@@ -459,6 +456,30 @@ Only touch the sections listed below, and only if they actually changed.
 - [ ] Diet module: toggle on/off in profile, daily log UI
 - [ ] Automatic split recommendation after 4+ weeks of data
 - [ ] Verify: full session flow works end-to-end with voice, camera, and logging
+
+---
+
+## Phase 2 — AI Coach
+
+### Phase 2a: Coaching without RAG
+Steps:
+1. .env setup: ANTHROPIC_API_KEY; uv add anthropic python-dotenv
+2. coach.py: Claude API wrapper, system prompt template, test call
+3. GET /api/coach/plan — profile + recent history → structured workout plan
+4. Workout section UI: "Get Today's Plan" button, displays the plan
+5. Per-set coaching: after each RPE tap, brief Claude response shown
+6. Post-session summary: session end → Claude summary + next-session note
+7. End-to-end Phase 2a verify
+
+### Phase 2b: Add Chroma RAG
+Steps:
+1. Knowledge base: /knowledge/ directory of Claude-generated markdown docs
+   (exercise progressions, RPE guidelines, form cues per category)
+2. uv add chromadb sentence-transformers
+3. ingest.py: chunk docs, embed with HuggingFace all-MiniLM-L6-v2, store in Chroma
+4. Retrieval wired into coach.py: relevant chunks injected into every coaching prompt
+5. A/B compare: same query with and without RAG context, confirm improvement
+6. End-to-end Phase 2b verify
 
 ---
 
@@ -512,6 +533,26 @@ This project doubles as a portfolio piece demonstrating:
 
 ---
 
+## Key Decisions Locked In
+[Architectural decisions that are settled. Append, never remove.]
+- Phase 2 architecture: upfront workout plan — one Claude API call at
+  session start returns a structured plan (exercises, sets, target reps);
+  user executes it; AI evaluates after each RPE input. Single call, works
+  offline after plan is received.
+- Phase 2 build order: 2a first (AI coaching without RAG, proves the
+  coaching loop), then 2b (add Chroma RAG + HuggingFace sentence-
+  transformers embeddings once 2a is stable).
+- Reactive coaching (AI decides next exercise after every set): deferred
+  to future major release — too expensive and complex for Phase 2.
+- weight_kg in session_sets: no such column exists or is needed. All 84
+  current exercises are bodyweight. If weighted exercises are added in
+  future (gym-mode expansion), add weight_kg REAL to session_sets via
+  ALTER TABLE migration in init_db() at that time. Phase 2 progression
+  logic uses exercise_id + reps_completed + rpe only.
+- HuggingFace integration: sentence-transformers (all-MiniLM-L6-v2) for
+  Chroma embeddings in Phase 2b; HuggingFace Spaces + Gradio for the
+  Phase 4 portfolio demo deployment.
+
 ## Change Log
 [Add entries here when decisions change mid-build]
 - 2026-06-06: Expanded from bodyweight-strength-only to a full home-training
@@ -525,6 +566,11 @@ This project doubles as a portfolio piece demonstrating:
 - 2026-06-08: Added `exercises.image_url TEXT` (nullable). Stores relative path to SVG
   line-art for each exercise. NULL until artwork is populated. Requires ALTER TABLE
   migration in database.py init_db(). Column sits between equipment_needed and form_cues.
+- 2026-06-08: Phase 1 complete. Locked Phase 2 architecture (see Key Decisions Locked In):
+  upfront single-call planning, 2a (no RAG) before 2b (RAG).
+- 2026-06-08: Phase 2b embedding model updated to `all-MiniLM-L6-v2` (HuggingFace
+  sentence-transformers), superseding the earlier `BAAI/bge-small` note in the Tech
+  Stack table and RAG Pipeline section. Chroma vector store unchanged.
 
 ## Pending Ideas
 [Dump ideas here mid-session — review between phases, not during them]

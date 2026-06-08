@@ -524,3 +524,82 @@ out to deliver. The session/set tables now hold real training data, which is the
 raw material Phase 2's AI coach reads to spot progression readiness and plan the
 next workout, and the same create/add-sets/end endpoints will be driven live (not
 by hand) once camera-based logging arrives in Phase 3.
+
+---
+## [Phase 1 · Step 7] — Close Phase 1 + architecture decisions
+*2026-06-08*
+
+### 🏁 Phase 1 complete
+This is the Phase 1 close-out. No new features were built — it locks in the
+decisions that shape Phase 2 and confirms the foundation is solid. With profile
+setup, the full exercise library, and manual session logging all working and
+verified, Phase 1 ("fill profile → log a workout → see it listed back") is done.
+
+### What was built
+Documentation and verification only. CLAUDE.md gained a new "Key Decisions Locked
+In" section (Phase 2 architecture, build order, deferred reactive coaching, the
+weight_kg clarification, and the HuggingFace model/deployment choices), a detailed
+"## Phase 2 — AI Coach" plan split into 2a (coaching, no RAG) and 2b (add Chroma
+RAG), and Change Log entries marking the milestone and the embedding-model update.
+The Phase 1 checklist is ticked complete and the Phase 2 stub now points at the
+detailed plan. A full smoke test confirmed /health, all four nav sections, profile
+save+reload persistence, and session log → list → detail all work with a clean
+console.
+
+### New terms introduced
+- **Upfront (one-shot) planning vs reactive coaching**: Two ways an AI coach can
+  drive a workout. *Upfront* makes a single API call at the start that returns the
+  whole session plan (which exercises, how many sets, target reps); the app then
+  runs that plan and only asks the AI to react to your RPE after each set.
+  *Reactive* would ask the AI what to do next after every single set — far more API
+  calls, more latency, and more cost. We chose upfront for Phase 2 and deferred
+  reactive to a future release.
+- **Works offline after the plan is received**: Because the plan is fetched once at
+  session start, the rest of the workout doesn't depend on the network — if the
+  connection drops mid-session you can still finish the logged plan.
+- **Build order 2a → 2b**: Deliberately building the AI coaching loop *without* RAG
+  first (2a) so the core "plan + feedback" mechanic is proven and debuggable on its
+  own, then layering retrieval-augmented knowledge (2b) once that's stable. Adding
+  both at once would make it hard to tell which piece caused a problem.
+- **RAG (Retrieval-Augmented Generation)** — recap: instead of trusting the model's
+  memory, you store reference documents as numeric vectors, fetch the few most
+  relevant chunks for the current question, and paste them into the prompt so the
+  model answers from real source material. Phase 2b adds this for fitness knowledge.
+- **Embedding model (all-MiniLM-L6-v2)**: The specific HuggingFace sentence-
+  transformers model that turns a chunk of text into a vector of numbers capturing
+  its meaning, so similar text sits close together and can be retrieved by
+  similarity. This supersedes the earlier BAAI/bge-small note in the spec.
+- **Gradio / HuggingFace Spaces**: Gradio is a Python library that wraps a function
+  in a simple web UI with almost no front-end code; HuggingFace Spaces is free
+  hosting that runs such an app from a git repo. Together they're the planned Phase 4
+  portfolio demo (AI planning + coaching only, no camera).
+- **Singleton row**: A table that, by design, only ever holds one row — here
+  user_profile at id=1. The smoke-test profile save overwrites that single row
+  rather than creating new ones.
+
+### Why these decisions were made
+- **Upfront planning over reactive**: One API call per session is cheap, fast, and
+  resilient to a dropped connection, and it's enough for a structured bodyweight
+  routine where the plan is known in advance. Reactive per-set decisions add cost
+  and complexity that aren't justified yet, so they're explicitly deferred rather
+  than left as an open question.
+- **2a before 2b**: Isolating the coaching loop from RAG means each layer is
+  verified independently — if coaching misbehaves we know it isn't the retrieval
+  step, and vice versa. It also gives a working, demonstrable AI coach sooner.
+- **weight_kg correction**: An earlier draft of this step claimed session_sets had a
+  weight_kg column sitting NULL for future use. Checking the actual schema showed no
+  such column exists in CLAUDE.md, database.py, or the live DB — and none is needed,
+  since all 84 exercises are bodyweight. The docs were corrected to say plainly that
+  the column doesn't exist and would be added via ALTER TABLE only if weighted
+  (gym-mode) exercises are introduced. Recording the *accurate* state matters more
+  than matching a mistaken assumption — the spec must not assert something false.
+- **Decisions locked in CLAUDE.md, not just SESSION_STARTER**: CLAUDE.md is the
+  durable source of truth; settled architecture belongs there so it survives across
+  sessions, with SESSION_STARTER holding only a one-line summary.
+
+### What this enables
+Phase 2 can start with an unambiguous plan: build coach.py and the /api/coach/plan
+endpoint first (2a), prove the plan-and-feedback loop against the real profile and
+session data now sitting in SQLite, then add the Chroma knowledge layer (2b). The
+foundation — profile, library, logging, a clean request/response/DB loop — is the
+exact input the AI coach consumes, so the next phase is purely additive.

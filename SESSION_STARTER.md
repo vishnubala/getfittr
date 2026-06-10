@@ -66,12 +66,15 @@ Short version: MediaPipe.js pose analysis + Claude API coaching + RAG fitness kn
   ✅ Step 6: Manual session log (exercises endpoint, session/set routes, history UI)
   ✅ Step 7: Close-out — Phase 2 architecture locked, final smoke test passed
 
-Phase 2 — AI Coach:   [ ] NOT STARTED (build 2a coaching, then 2b RAG — see CLAUDE.md)
+Phase 2a — AI Coach (no RAG):
+  ✅ Step 1: Config — anthropic + python-dotenv, .env / .env.example, mock mode + model env vars
+  [ ] Step 2: coach.py — Claude API wrapper + mock mode
+Phase 2b — AI Coach (RAG):  [ ] NOT STARTED
 Phase 3 — The Eyes:   [ ] NOT STARTED
 Phase 4 — Polish:     [ ] NOT STARTED
 
-Last completed: Phase 1 closed out — Phase 2 architecture locked in CLAUDE.md, final smoke test passed (health, all sections, profile persistence, session log/view)
-Next task: Phase 2a Step 1 — .env + ANTHROPIC_API_KEY, uv add anthropic python-dotenv
+Last completed: Phase 2a Step 1 — config setup: anthropic + python-dotenv declared, .env/.env.example created (USE_MOCK_AI, CLAUDE_MODEL), CLAUDE.md stale refs fixed + mock-mode decision locked
+Next task: Phase 2a Step 2 — coach.py with Claude API wrapper + mock mode
 
 ---
 

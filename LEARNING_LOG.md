@@ -603,3 +603,67 @@ endpoint first (2a), prove the plan-and-feedback loop against the real profile a
 session data now sitting in SQLite, then add the Chroma knowledge layer (2b). The
 foundation — profile, library, logging, a clean request/response/DB loop — is the
 exact input the AI coach consumes, so the next phase is purely additive.
+
+---
+## [Phase 2a · Step 1] — Configuration setup
+*2026-06-10*
+
+### What was built
+No application code yet — this step sets up the configuration the AI coach will
+read in Step 2. Two new files now exist in the project root: `.env` (holds the real
+secrets and switches, never committed) and `.env.example` (a safe, committable
+template showing which variables are needed). CLAUDE.md was corrected to name the
+real embedding model and to make the Claude model configurable, and two new
+architecture decisions (mock mode, configurable model) were locked in.
+
+### New terms introduced
+- **Environment variable (env var)**: A named value that lives outside your source
+  code, in the runtime environment. Code reads it at startup instead of having the
+  value written directly in a `.py` file. We use them for the API key, the model
+  name, and the mock-mode switch — so none of those are hardcoded.
+- **`.env` file**: A plain text file of `KEY=value` lines that holds env vars for
+  local development. The `python-dotenv` package loads it into the program at
+  startup. It is gitignored because it contains the real API key.
+- **`.env.example`**: A committed copy of `.env` with the same keys but no real
+  secret values. It documents, for anyone setting up the project, exactly which env
+  vars they must provide. Copy it to `.env` and fill in the real key.
+- **`python-dotenv`**: The Python library that reads a `.env` file and makes its
+  values available via `os.getenv("NAME")`. Without it, env vars would have to be
+  set manually in the shell every session.
+- **`anthropic`**: The official Python SDK (software development kit) for calling the
+  Claude API. coach.py will use it in Step 2 to send prompts and receive plans.
+- **Mock mode (`USE_MOCK_AI`)**: A boolean switch. When `true`, the coach returns a
+  fixed, canned workout plan and makes **no** network/API call — so the whole UI can
+  be built and tested for free, offline, and deterministically. Set to `false` only
+  when deliberately testing real Claude output. The terminal must print a visible
+  `[MOCK MODE]` warning so it's never ambiguous which mode is active.
+- **`uv add`**: The uv command that adds a dependency to `pyproject.toml` and the
+  lockfile. Running it for packages already declared is a harmless no-op
+  confirmation (here, `anthropic` and `python-dotenv` were already present from the
+  Phase 1 scaffold).
+
+### Why these decisions were made
+- **Mock mode by default for dev**: Building and testing the workout UI shouldn't
+  cost API tokens, require a live key, or give different output each run. A canned
+  plan makes development fast, free, and repeatable; real calls are opt-in. The
+  loud `[MOCK MODE]` log prevents the classic trap of thinking you're testing real
+  AI when you're not (and vice versa).
+- **Model name in an env var, never in source**: The dev default
+  (`claude-haiku-4-5-20251001`) is cheap and fast for iterating; swapping to a
+  higher-quality model for a quality pass should be a one-line `.env` edit, not a
+  code change. Keeping the string out of Python also means no accidental commit of a
+  model choice and one single place to change it.
+- **`.env` gitignored, `.env.example` committed**: The real key must never reach the
+  repo, but new setups still need to know which variables exist. The example file
+  solves both: documentation without exposure. Verified `.env` is in `.gitignore`
+  before creating it.
+- **Corrected stale CLAUDE.md references**: The spec still named `BAAI/bge-small` and
+  a pinned sonnet model from before the architecture was finalised. Fixing them now
+  (to `all-MiniLM-L6-v2` and the configurable model) keeps the source of truth
+  accurate before any code depends on it.
+
+### What this enables
+Step 2 (coach.py) can now load configuration cleanly: read the key, model, and
+mock flag from the environment via `python-dotenv`, branch on `USE_MOCK_AI` to
+either return the canned plan or call Claude through the `anthropic` SDK — with no
+secrets or model strings hardcoded anywhere in the Python.

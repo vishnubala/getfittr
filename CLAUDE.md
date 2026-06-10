@@ -19,8 +19,8 @@ No authentication. No deployment. No public access. One user only.
 | Pose Engine | MediaPipe Pose Landmarker (runs in browser via CDN) |
 | Voice | Web Speech API (browser built-in, toggle on/off) |
 | Backend | Python 3.11+ with FastAPI |
-| AI Coaching | Anthropic Claude API (model: claude-sonnet-4-20250514) |
-| Fitness Knowledge | RAG — BAAI/bge-small embeddings + Chroma vector store |
+| AI Coaching | Anthropic Claude API (model: Configurable via CLAUDE_MODEL env var (default: claude-haiku-4-5-20251001 for dev)) |
+| Fitness Knowledge | RAG — all-MiniLM-L6-v2 embeddings (sentence-transformers, local) + Chroma vector store |
 | Storage | SQLite (single local file) |
 | Env vars | python-dotenv (.env file, never committed) |
 
@@ -284,13 +284,13 @@ This prevents Claude from generating generic or incorrect fitness advice.
 
 ```python
 # How it works:
-# 1. seed_knowledge.py chunks fitness docs → embeds with BAAI/bge-small → stores in Chroma
+# 1. seed_knowledge.py chunks fitness docs → embeds with all-MiniLM-L6-v2 → stores in Chroma
 # 2. On every coaching call: retrieve top-3 relevant chunks for the current query
 # 3. Inject retrieved chunks into Claude system prompt as context
 # 4. Claude generates advice grounded in retrieved knowledge, not hallucination
 ```
 
-Embedding model: `BAAI/bge-small-en-v1.5` (via sentence-transformers, runs locally)
+Embedding model: `all-MiniLM-L6-v2` (via sentence-transformers, runs locally)
 Vector store: Chroma (persisted to `data/chroma/`)
 
 ---
@@ -552,6 +552,12 @@ This project doubles as a portfolio piece demonstrating:
 - HuggingFace integration: sentence-transformers (all-MiniLM-L6-v2) for
   Chroma embeddings in Phase 2b; HuggingFace Spaces + Gradio for the
   Phase 4 portfolio demo deployment.
+- Mock mode: USE_MOCK_AI env var (true/false). When true, coach.py returns a canned
+  workout plan — no API call is made. Terminal must log a visible [MOCK MODE] warning.
+  Use for all functional/UI testing. Set to false only when testing real AI output.
+- AI model: controlled by CLAUDE_MODEL env var. Default dev model:
+  claude-haiku-4-5-20251001. Upgrade to claude-sonnet-4-6 in .env for quality testing.
+  Never hardcode a model string in Python source files.
 
 ## Change Log
 [Add entries here when decisions change mid-build]

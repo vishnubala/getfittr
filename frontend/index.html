@@ -42,21 +42,11 @@
                     <p>Camera feed will appear here</p>
                 </div>
             </div>
-            <div class="card">
-                <h3 class="exercise-name">Exercise Name</h3>
-                <p class="coaching-text muted">Coaching cues will appear here during
-                    your set.</p>
-                <div class="rep-counter">
-                    <span class="rep-label">Reps</span>
-                    <span class="rep-count">0</span>
-                </div>
-                <div class="rpe-buttons">
-                    <button class="rpe-btn">&#128524; Easy</button>
-                    <button class="rpe-btn">&#128170; Good</button>
-                    <button class="rpe-btn">&#128548; Hard</button>
-                    <button class="rpe-btn">&#128565; Failed</button>
-                </div>
-            </div>
+            <!-- Plan view: AI-generated plan before session starts. Step 4. -->
+            <div id="workout-plan"></div>
+
+            <!-- Active session view: live set controls. Step 5 will populate this. -->
+            <div id="workout-active" class="hidden"></div>
         </section>
 
         <!-- HISTORY -->
@@ -227,5 +217,6 @@
 
     <script src="/static/app.js"></script>
     <script src="/static/session.js"></script>
+    <script src="/static/workout.js"></script>
 </body>
 </html>

@@ -138,6 +138,19 @@ Every call to the Anthropic API (or any external service) must be wrapped in try
 Networks fail. APIs return unexpected responses. Rate limits happen.
 Without error handling, one bad API response crashes the whole app.
 
+### The get_db() generator must stay alive for the connection to stay open
+FastAPI's get_db() is a generator. Its finally block closes the connection.
+If you call conn = next(get_db()) and throw away the generator, Python GCs
+it immediately — closing the connection before the route uses it.
+
+Broken:  conn = next(get_db())
+Fixed:   db_gen = get_db(); conn = next(db_gen)
+         try: ... finally: db_gen.close()
+
+This is why FastAPI's Depends(get_db) pattern exists — it holds the generator
+alive for the full request lifetime. In this project's routes that manage the
+connection manually, always hold the generator reference.
+
 ---
 
 ## Part 4: SQLite Specifics

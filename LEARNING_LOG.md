@@ -833,3 +833,81 @@ Step 4 can now add a "Get Today's Plan" button to the Workout screen that simply
 `fetch()`es `/api/coach/plan` and renders the JSON — the whole planning UI can be
 built against mock mode, free and offline, with a response shaped identically to
 what real Claude output will produce.
+
+---
+## [Phase 2a · Step 4] — Workout section UI: plan display
+*2026-06-11*
+
+### What was built
+The Workout tab now shows the AI plan. On first visit it presents a single "Get
+Today's Plan" button; clicking it fetches `GET /api/coach/plan` and renders the
+full session — coach message, warm-up, optional skill work, three supersets, and a
+cool-down. A new file, `frontend/workout.js`, owns this and manages four on-screen
+states (empty, loading, loaded, error). The plan is cached in memory so leaving and
+returning to the tab re-shows it instantly without another request; a "Refresh
+Plan" button forces a fresh fetch. No backend changes.
+
+### New terms introduced
+- **Client-side state machine**: The plan area is always in exactly one of four
+  states — empty, loading, loaded, error — and the JS swaps the area's HTML to move
+  between them. Thinking in named states (rather than ad-hoc show/hide) keeps the UI
+  predictable: every path ends in one known, fully-rendered state.
+- **`innerHTML` rendering**: Each state builds an HTML string and assigns it to the
+  container's `innerHTML`, replacing whatever was there. Simple and fast for
+  read-only views like this; the trade-off is that any old event listeners are
+  discarded, so buttons are re-bound after every render.
+- **Re-binding event listeners**: Because `innerHTML` throws away the old DOM (and
+  its listeners), each render function re-attaches the click handler to the button
+  it just created. Miss this and the button silently does nothing.
+- **HTML escaping**: `esc()` converts `&`, `<`, `>` to safe entities before text is
+  put into `innerHTML`. The mock text is safe, but real Claude output isn't
+  guaranteed to be, and unescaped `<` could break the layout or inject markup.
+- **In-memory cache (`_plan`)**: A module-level variable holds the last fetched
+  plan. `loadWorkoutPlan()` renders from it without a network call; only the
+  button / Refresh actually fetch. This avoids a redundant API hit (and, later, a
+  redundant paid call) every time you glance at the tab.
+- **Nullish handling in template strings**: `workDetail(item)` branches on which
+  fields are present (`sets`, `reps`, `seconds`, `exercise_id`) to format one
+  correct string for very different row types — a bodyline hold ("⏱ 30s"), a
+  dynamic stretch ("10 reps"), or a strength set ("3 × 5-8 reps").
+- **CSS composition (multiple classes)**: Rather than redefine card styling, the
+  coach-message and superset boxes use `class="card plan-coach-msg"` etc. — they
+  inherit `.card` and add only their one extra rule (an accent border, a margin).
+  Less duplicated CSS, consistent look.
+- **Design tokens / CSS variables**: All new styles reference existing variables
+  (`--accent`, `--muted`, `--border`) instead of hard-coded colours, so the whole
+  app stays themeable from one place and this step introduces no new colour values.
+
+### Why these decisions were made
+- **Button-triggered fetch, never automatic**: Generating a plan is a deliberate
+  action (and in real mode, a paid API call). `loadWorkoutPlan()` only ever renders
+  what's cached or the empty button — it never fetches on its own — so merely
+  opening the tab can't rack up calls.
+- **Cache the plan in JS**: Without caching, every tab switch would re-fetch. Since
+  the plan doesn't change until you ask for a new one, holding it in `_plan` and
+  re-rendering is both faster and (in real mode) cheaper. "Refresh Plan" is the
+  explicit escape hatch when you do want a new one.
+- **One `workDetail()` helper for all row types**: Warm-up, skill work, and superset
+  rows display differently but are conceptually "name + how much work". Centralising
+  the formatting in one function avoids three near-identical branches scattered
+  through the render code and keeps the rules in one place.
+- **Four explicit states**: Showing a clear loading line and a real error card (with
+  a Try Again button) — instead of a blank screen on a slow or failed request — is
+  the difference between the app feeling broken and feeling responsive. The error
+  state was verified by simulating a failed fetch; Try Again recovers cleanly.
+- **Stayed surgical and frontend-only**: The camera box was left untouched, the
+  Step 5 `#workout-active` stub was added (hidden) but not built, and `app.js` got a
+  single navigation hook — keeping the diff small and the step's scope honest.
+
+### Note on voice
+`voice.js` is still an empty stub — there is no `speak()` function yet. Voice
+output (reading the coach message aloud) is deliberately deferred. A `TODO` comment
+at the top of `workout.js` marks where it will hook in, planned for Phase 2a Step 5
+or later when `voice.js` is actually implemented.
+
+### What this enables
+The plan is now visible and interactive in the browser, entirely against mock mode
+(free, offline, and shaped identically to real output). Step 5 can build the live
+session on top of this: turning the displayed plan into an active workout in
+`#workout-active` — Start Set / End Set, RPE capture per set, and the first real
+use of `voice.js` for spoken cues.

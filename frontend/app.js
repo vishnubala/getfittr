@@ -41,6 +41,12 @@ function showSection(name) {
         window.loadExercises();
         window.loadSessions();
     }
+
+    // Workout tab: render the cached plan (or the empty-state button). workout.js
+    // exposes this on window; the typeof guard covers the very first call.
+    if (name === "workout" && typeof window.loadWorkoutPlan === "function") {
+        window.loadWorkoutPlan();
+    }
 }
 
 // Read the current hash (e.g. "#workout") and return the bare section name.

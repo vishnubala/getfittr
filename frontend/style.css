@@ -747,3 +747,90 @@ textarea {
         padding: 1rem 0.75rem;
     }
 }
+
+/* ---- Workout — plan display (Phase 2a Step 4) ---- */
+
+/* Generic hide utility (used by the #workout-active Step 5 stub). */
+.hidden {
+    display: none;
+}
+
+/* Centred message states: empty, loading, error. */
+.plan-centered {
+    text-align: center;
+}
+
+.plan-centered .btn-primary,
+.plan-centered .btn-secondary {
+    margin-top: 0.75rem;
+}
+
+.plan-error-detail {
+    font-size: 0.82rem;
+}
+
+/* Coach message: a card with an accent spine on the left. */
+.plan-coach-msg {
+    border-left: 3px solid var(--accent);
+}
+
+.plan-section {
+    margin-bottom: 1.25rem;
+}
+
+.plan-section-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+}
+
+/* One plan row: name (+ note) on the left, work detail on the right.
+   Shared by warm-up/skill rows and superset-exercise rows. */
+.plan-item,
+.plan-superset-exercise {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.plan-item:last-child,
+.plan-superset-exercise:last-child {
+    border-bottom: none;
+}
+
+.plan-item-name {
+    font-weight: 600;
+}
+
+.plan-item-detail {
+    font-size: 0.85rem;
+    color: var(--muted);
+    white-space: nowrap;
+    margin-left: 1rem;
+}
+
+.plan-item-note {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--muted);
+    font-weight: 400;
+    margin-top: 0.2rem;
+}
+
+/* Superset: a card grouping a paired A/B/C set of exercises. */
+.plan-superset {
+    margin-bottom: 0.75rem;
+}
+
+.plan-superset-pair {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.6rem;
+}

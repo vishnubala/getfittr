@@ -70,13 +70,14 @@ Phase 2a — AI Coach (no RAG):
   ✅ Step 1: Config — anthropic + python-dotenv, .env / .env.example, mock mode + model env vars
   ✅ Step 2: coach.py — Claude API wrapper + mock mode (MOCK_PLAN, lazy client, system prompt)
   ✅ Step 3: GET /api/coach/plan route + get_recent_sessions_for_coach() DB helper
-  [ ] Step 4: Workout UI — "Get Today's Plan" button, render the plan
+  ✅ Step 4: Workout UI — plan display (workout.js, 4 states, cached, mock render)
+  [ ] Step 5: Per-set coaching — Start/End Set, RPE capture, voice.js
 Phase 2b — AI Coach (RAG):  [ ] NOT STARTED
 Phase 3 — The Eyes:   [ ] NOT STARTED
 Phase 4 — Polish:     [ ] NOT STARTED
 
-Last completed: Phase 2a Step 3 — GET /api/coach/plan (reads profile + last 3 sessions via new get_recent_sessions_for_coach JOIN helper, returns plan JSON); fixed CLAUDE_MODEL default + a next(get_db()) connection-lifetime bug
-Next task: Phase 2a Step 4 — Workout UI: "Get Today's Plan" button that fetches /api/coach/plan and renders the plan
+Last completed: Phase 2a Step 4 — Workout UI in workout.js: "Get Today's Plan" button fetches /api/coach/plan and renders the full plan (coach msg, warm-up, skill, supersets, cool-down) with 4 states (empty/loading/loaded/error) and in-memory caching
+Next task: Phase 2a Step 5 — per-set coaching: Start Set / End Set flow, RPE capture, and voice.js implementation
 
 ---
 

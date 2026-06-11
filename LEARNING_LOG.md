@@ -755,3 +755,81 @@ recent sessions from the database, passes them to `get_workout_plan(...)`, and
 returns the result — no AI logic in the route at all. Because mock mode produces a
 schema-accurate plan with real exercise IDs, the entire "Get Today's Plan" UI can
 be built and verified before a single real API token is spent.
+
+---
+## [Phase 2a · Step 3] — GET /api/coach/plan endpoint
+*2026-06-11*
+
+### What was built
+The AI coach is now reachable over HTTP. A new endpoint, `GET /api/coach/plan`,
+reads the user's profile and last three sessions from the database, hands them to
+`get_workout_plan()` (Step 2), and returns the resulting plan as JSON. A new
+database helper, `get_recent_sessions_for_coach()`, produces the session history
+in exactly the shape the coach expects. Two small fixes also landed: a hardcoded
+fallback for the `CLAUDE_MODEL` env var, and replacing an em-dash in the mock-mode
+log line with a plain hyphen so the Windows console renders it cleanly.
+
+### New terms introduced
+- **HTTP endpoint vs the function behind it**: The endpoint is the URL
+  (`/api/coach/plan`) the browser hits; the function (`coach_plan`) is the Python
+  that runs when it's hit. The endpoint is deliberately thin — it gathers inputs
+  from the DB and delegates all the real work to `get_workout_plan()`, so the web
+  layer stays free of AI logic.
+- **SQL JOIN (recap, used here)**: `session_sets` stores only an `exercise_id`
+  number; the coach needs exercise *names*. The query joins `session_sets` to
+  `exercises` on that id so each set comes back already carrying its name.
+- **Two-query vs one-query fetch**: `get_recent_sessions_for_coach()` first gets
+  the recent sessions, then runs one set-fetching query per session (a small,
+  bounded number — at most 3). This keeps each query simple and the grouping
+  obvious, at the cost of a few extra queries. Fine at this scale.
+- **Generator function**: `get_db()` is a *generator* — a function with `yield`.
+  Calling it doesn't run the body; it returns a generator object. `next(...)` runs
+  it up to the `yield` (handing back the connection) and pauses it there. The code
+  after `yield` (in a `finally:`, the `conn.close()`) only runs when the generator
+  is resumed, closed, or garbage-collected.
+- **Garbage collection (GC) and `finally`**: Python frees objects nothing
+  references anymore. When a *paused* generator is freed, Python runs its `finally`
+  block on the way out. That detail caused the bug below.
+- **`run_in_threadpool`**: FastAPI runs a plain `def` (non-`async`) route in a
+  background thread so a slow call (like the real Claude API) doesn't block the
+  whole server. This is why the DB connection is opened with
+  `check_same_thread=False` (Step 2) — it gets used from a worker thread.
+- **`HTTPException`**: FastAPI's way to return an error status from a route.
+  `raise HTTPException(500, detail=...)` produces an HTTP 500 with a message. We
+  also *catch* the 404 that `get_profile` raises and turn it into an empty profile.
+
+### Why these decisions were made
+- **Thin route, logic in dedicated modules**: The route only orchestrates — read
+  profile, read history, call coach, return. The DB query lives in `database.py`
+  and the AI logic in `coach.py`. Each file has one job, so the route stays a few
+  readable lines and the pieces are testable on their own.
+- **A new DB function shaped for the coach**: `get_recent_sessions_for_coach()`
+  returns exactly the `{date, sets:[{exercise_name, reps_completed,
+  duration_seconds, rpe}]}` structure `_format_sessions()` consumes. Matching the
+  consumer's shape at the source means no reshaping glue in the route.
+- **Empty profile instead of an error**: `get_profile` raises a 404 when no
+  profile exists yet. For planning we'd rather degrade gracefully, so the route
+  catches that and passes `{}` — in mock mode the profile is ignored anyway, and
+  in real mode the coach can still produce a sensible default.
+- **Default for `CLAUDE_MODEL`**: If `.env` is missing the variable, the model was
+  `None`, which would break a real call. A hardcoded fallback to the dev model
+  keeps the app working out-of-the-box while still letting `.env` override it.
+
+### The bug I hit (and the fix) — `next(get_db())`
+My first version wrote `conn = next(get_db())`. It failed immediately with
+`sqlite3.ProgrammingError: Cannot operate on a closed database`. Reason: `get_db()`
+returns a generator whose `finally:` closes the connection. Because nothing kept a
+reference to the *generator* (only to `conn`), Python garbage-collected the
+generator the instant `next()` returned — running its `finally` and closing the
+connection before the very next line could use it. The fix is to hold the
+generator in a variable and close it explicitly at the end:
+`db_gen = get_db(); conn = next(db_gen); try: ...; finally: db_gen.close()`. Now
+the generator stays alive for the whole request and the connection closes cleanly
+only when we're done. (Lesson: when driving a dependency generator by hand, keep
+the generator alive, not just its yielded value.)
+
+### What this enables
+Step 4 can now add a "Get Today's Plan" button to the Workout screen that simply
+`fetch()`es `/api/coach/plan` and renders the JSON — the whole planning UI can be
+built against mock mode, free and offline, with a response shaped identically to
+what real Claude output will produce.

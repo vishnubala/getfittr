@@ -27,7 +27,7 @@ load_dotenv()
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 USE_MOCK_AI = os.getenv("USE_MOCK_AI", "true")
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 
 # Placeholder value shipped in .env.example — treated as "no real key set".
 _PLACEHOLDER_KEY = "replace_with_your_key"
@@ -266,7 +266,7 @@ def get_workout_plan(profile: dict, recent_sessions: list) -> dict:
     """
     if USE_MOCK_AI == "true":
         print(
-            "[MOCK MODE] get_workout_plan called — returning canned plan, "
+            "[MOCK MODE] get_workout_plan called - returning canned plan, "
             "no API call made."
         )
         return MOCK_PLAN

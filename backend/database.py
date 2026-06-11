@@ -441,3 +441,36 @@ def get_db():
         yield conn
     finally:
         conn.close()
+
+
+def get_recent_sessions_for_coach(db, n=3):
+    """Return the n most recent sessions, each with its sets, for AI coaching.
+
+    Shaped to match exactly what coach._format_sessions() expects:
+        [{"date": str,
+          "sets": [{"exercise_name", "reps_completed",
+                    "duration_seconds", "rpe"}, ...]}, ...]
+
+    Sessions are newest-first; sets within a session are in set order. A session
+    with no logged sets is still included (with sets == []). Returns [] when no
+    sessions exist yet.
+    """
+    sessions = db.execute(
+        "SELECT id, date FROM sessions ORDER BY date DESC, id DESC LIMIT ?",
+        (n,),
+    ).fetchall()
+
+    result = []
+    for sess in sessions:
+        set_rows = db.execute(
+            """SELECT e.name AS exercise_name, s.reps_completed,
+                      s.duration_seconds, s.rpe
+               FROM session_sets s
+               JOIN exercises e ON e.id = s.exercise_id
+               WHERE s.session_id = ?
+               ORDER BY s.set_number ASC""",
+            (sess["id"],),
+        ).fetchall()
+        result.append({"date": sess["date"], "sets": [dict(r) for r in set_rows]})
+
+    return result

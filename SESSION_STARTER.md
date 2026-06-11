@@ -69,13 +69,14 @@ Short version: MediaPipe.js pose analysis + Claude API coaching + RAG fitness kn
 Phase 2a — AI Coach (no RAG):
   ✅ Step 1: Config — anthropic + python-dotenv, .env / .env.example, mock mode + model env vars
   ✅ Step 2: coach.py — Claude API wrapper + mock mode (MOCK_PLAN, lazy client, system prompt)
-  [ ] Step 3: GET /api/coach/plan route
+  ✅ Step 3: GET /api/coach/plan route + get_recent_sessions_for_coach() DB helper
+  [ ] Step 4: Workout UI — "Get Today's Plan" button, render the plan
 Phase 2b — AI Coach (RAG):  [ ] NOT STARTED
 Phase 3 — The Eyes:   [ ] NOT STARTED
 Phase 4 — Polish:     [ ] NOT STARTED
 
-Last completed: Phase 2a Step 2 — backend/coach.py: get_workout_plan() with mock mode (canned MOCK_PLAN using real DB ids), lazy Anthropic client, system prompt template; DB _connect() thread-safety fix
-Next task: Phase 2a Step 3 — GET /api/coach/plan route (read profile + recent sessions, call get_workout_plan)
+Last completed: Phase 2a Step 3 — GET /api/coach/plan (reads profile + last 3 sessions via new get_recent_sessions_for_coach JOIN helper, returns plan JSON); fixed CLAUDE_MODEL default + a next(get_db()) connection-lifetime bug
+Next task: Phase 2a Step 4 — Workout UI: "Get Today's Plan" button that fetches /api/coach/plan and renders the plan
 
 ---
 

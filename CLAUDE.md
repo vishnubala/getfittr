@@ -461,6 +461,13 @@ plan in the "## Phase 2 — AI Coach" section below.
 
 ## Phase 2 — AI Coach
 
+The workout plan returned by coach.py is a structured JSON object (session_type,
+estimated_duration_minutes, coach_message, warm_up, skill_work, supersets,
+cool_down). Plan schema note: within `warm_up`, items WITH an `exercise_id` are
+trackable bodyline drills (plank, hollow hold, side plank — logged as holds);
+items WITHOUT an `exercise_id` are dynamic stretches (shoulder rolls, hip circles,
+leg swings) rendered as instruction text only and never logged.
+
 ### Phase 2a: Coaching without RAG
 Steps:
 1. .env setup: ANTHROPIC_API_KEY; uv add anthropic python-dotenv
@@ -596,6 +603,10 @@ This project doubles as a portfolio piece demonstrating:
 - Phase 4 / voice.js: voice-triggered exercise selection — user says "add push-up"
   mid-session, app matches against the exercise library and auto-selects. Integrates
   with the Web Speech API already planned in voice.js. Useful when hands are occupied.
+- Weekly coaching summary: after 7 days of sessions, AI generates a
+  plain-English summary of the week — consistency, RPE trends, what
+  progressed, what to watch. Delivered in the Workout section as a
+  banner. Candidate for Phase 4 alongside the progress dashboard.
 
 ---
 

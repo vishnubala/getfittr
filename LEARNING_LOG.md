@@ -667,3 +667,91 @@ Step 2 (coach.py) can now load configuration cleanly: read the key, model, and
 mock flag from the environment via `python-dotenv`, branch on `USE_MOCK_AI` to
 either return the canned plan or call Claude through the `anthropic` SDK — with no
 secrets or model strings hardcoded anywhere in the Python.
+
+---
+## [Phase 2a · Step 2] — coach.py: Claude API wrapper with mock mode
+*2026-06-11*
+
+### What was built
+The backend now has `backend/coach.py`, the single module that talks to the
+Anthropic Claude API. It exposes one function, `get_workout_plan(profile,
+recent_sessions)`, which returns a structured workout plan as a Python dict. A
+`USE_MOCK_AI` switch means it returns a hand-written canned plan (no network, no
+key, no cost) during development and only calls the real API when explicitly
+turned on. A one-line thread-safety fix was also made to the database layer.
+
+### New terms introduced
+- **API wrapper module**: A single file that hides all the messy details of
+  talking to an external service (here, Claude) behind one simple function. The
+  rest of the app calls `get_workout_plan(...)` and never sees prompts, model
+  names, or the SDK — so if any of that changes, only this one file changes.
+- **Mock mode**: A development switch that returns fake-but-realistic data
+  instead of calling the real paid API. `USE_MOCK_AI=true` makes the coach return
+  a fixed plan, so the UI and the rest of the system can be built and tested for
+  free and offline. It prints a loud `[MOCK MODE]` line so you never mistake mock
+  output for real AI output.
+- **Lazy initialisation**: Creating an expensive or key-requiring object only at
+  the moment it's first actually needed, not when the module loads. The Anthropic
+  client is built inside `_get_client()` on the first real call — so importing
+  coach.py (or running in mock mode) never needs a valid API key.
+- **Module-level vs function-level**: Code at the top of a file (module level)
+  runs once, the moment the file is imported. Code inside a function runs only
+  when that function is called. We load the `.env` vars at module level (cheap,
+  always needed) but build the API client at function level (only sometimes
+  needed, and requires a key).
+- **Environment variable (env var)**: A named setting read from the runtime
+  environment rather than hardcoded in source. `os.getenv("USE_MOCK_AI", "true")`
+  reads it, falling back to `"true"` if unset. `python-dotenv`'s `load_dotenv()`
+  loads them from the `.env` file into that environment first.
+- **System prompt**: The instruction block that tells the model who it is and how
+  to behave, sent separately from the user's message. Ours embeds the coach's
+  role, the hard training rules, the user's context, and the exact JSON shape the
+  answer must take.
+- **Structured (JSON) output**: Asking the model to reply as a strict JSON object
+  rather than prose, so the program can parse it directly into data. The prompt
+  forbids any preamble or markdown fences to keep the reply machine-readable.
+- **Markdown code fences**: The ```` ``` ```` lines models sometimes wrap code/JSON
+  in. `_strip_code_fences()` removes them defensively before `json.loads()` so an
+  over-helpful reply doesn't break parsing.
+- **`check_same_thread=False`**: A SQLite connection option. By default a Python
+  SQLite connection may only be used by the thread that created it; FastAPI can
+  serve requests on different worker threads, which intermittently raised a
+  `ProgrammingError`. Setting this to `False` allows the connection to be used
+  across threads, fixing the crash. (Safe here because each request opens and
+  closes its own short-lived connection via `get_db`.)
+- **Graceful degradation**: When the real API call fails, instead of crashing we
+  catch the error and return `{"error": True, "message": ...}` so the caller (the
+  route, next step) can show a friendly message rather than a 500.
+
+### Why these decisions were made
+- **One module owns all Claude calls**: Centralising API interaction means the
+  routes stay simple and ignorant of AI details, and any change to model, prompt,
+  or SDK touches exactly one file. It also keeps the expensive/credential-bound
+  code in a single, easy-to-audit place.
+- **Mock mode as the default**: Building and testing the planning UI shouldn't
+  cost money or require a live key, and shouldn't depend on network reliability.
+  Defaulting `USE_MOCK_AI` to `"true"` makes the safe, free path the one you get
+  unless you deliberately opt into real calls — and the printed warning prevents
+  silent confusion between mock and real output.
+- **Real exercise IDs baked into the mock**: The mock plan uses the actual seeded
+  database IDs (Plank=45, Full Pull-up=20, etc.), so the frontend can resolve and
+  render the mock exactly as it will a live plan — the UI can't tell the
+  difference, which makes mock-mode testing genuinely representative.
+- **Lazy client + key validation**: Instantiating the client at import would make
+  every import (and mock run) need a key and the `anthropic` package importable.
+  Deferring it, and rejecting the `replace_with_your_key` placeholder with a clear
+  `ValueError`, fails loudly only when a real call is actually attempted without a
+  real key.
+- **Never hardcode the model**: The model name comes from `CLAUDE_MODEL` in `.env`
+  so we can swap the cheap dev model for a stronger one for quality testing
+  without editing Python — matching the decision locked in Step 1.
+- **Catch-all on the real path**: Network calls, JSON parsing, and model output
+  are all fallible. Returning a structured error keeps a bad call from taking down
+  the request, and gives the next step a clean shape to handle.
+
+### What this enables
+Step 3 can now add a `GET /api/coach/plan` route that simply reads the profile and
+recent sessions from the database, passes them to `get_workout_plan(...)`, and
+returns the result — no AI logic in the route at all. Because mock mode produces a
+schema-accurate plan with real exercise IDs, the entire "Get Today's Plan" UI can
+be built and verified before a single real API token is spent.

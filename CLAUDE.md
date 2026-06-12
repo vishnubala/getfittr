@@ -208,6 +208,8 @@ HINGE: Romanian Deadlift → Single-Leg RDL → Nordic Curl
 | 😤 | Hard | 8–9 | Hold reps, focus on form |
 | 😵 | Failed | 10 | Reduce reps, flag for form review |
 
+Stored session_sets.rpe value per button: 😌 Easy = 5, 💪 Good = 7, 😤 Hard = 9, 😵 Failed = 10. The ≤7 progression trigger therefore counts Easy and Good toward advancement; Hard and Failed do not.
+
 ### Session Structure (per BWF RR)
 
 ```
@@ -451,7 +453,6 @@ plan in the "## Phase 2 — AI Coach" section below.
 - [ ] Verify: camera detects pose, counts reps, flags form issues for push-up + squat
 
 ### ⏳ PHASE 4 — Polish (after Phase 3 passes verification)
-- [ ] voice.js: Web Speech API coaching output (toggle on/off)
 - [ ] Progress dashboard: charts of reps, form scores, variation history
 - [ ] Diet module: toggle on/off in profile, daily log UI
 - [ ] Automatic split recommendation after 4+ weeks of data
@@ -474,7 +475,9 @@ Steps:
 2. coach.py: Claude API wrapper, system prompt template, test call
 3. GET /api/coach/plan — profile + recent history → structured workout plan
 4. Workout section UI: "Get Today's Plan" button, displays the plan
-5. Per-set coaching: after each RPE tap, brief Claude response shown
+5a: Workout player state machine — Start Workout (creates session), sequence through the plan (warm-up holds, skill, supersets, cool-down), Start Set / End Set, editable rep/duration capture, rest timer, open-session resume. Sets saved with rpe NULL.
+5b: RPE capture + local rule-based per-set feedback (no API call), writing the rpe value to the set.
+5c: voice.js — Web Speech API output.
 6. Post-session summary: session end → Claude summary + next-session note
 7. End-to-end Phase 2a verify
 
@@ -565,6 +568,19 @@ This project doubles as a portfolio piece demonstrating:
 - AI model: controlled by CLAUDE_MODEL env var. Default dev model:
   claude-haiku-4-5-20251001. Upgrade to claude-sonnet-4-6 in .env for quality testing.
   Never hardcode a model string in Python source files.
+- Per-set feedback is generated locally from JS templates keyed on the RPE button —
+  no Claude API call per set. The only two API calls per session remain the upfront
+  plan and the post-session summary.
+- The session row is created when the user clicks "Start Workout", not when the plan
+  is fetched, to avoid orphan sessions from abandoned plan fetches.
+- An "open" session = a sessions row with a start_time and no end_time. On loading the
+  Workout page the app calls GET /api/sessions/open; if one exists, offer Resume or
+  Discard. DB holds saved sets; localStorage holds current plan position.
+- Rest timer: default 90s, user-customisable, with a skip button. On expiry it is
+  non-blocking — it plays a cue and flips to a count-up; "Start Next Set" is live for
+  the entire rest period regardless of the timer.
+- Reps at End Set are pre-filled with the plan's target and remain editable.
+- Voice on/off toggle state persists in localStorage (no user_profile column).
 
 ## Change Log
 [Add entries here when decisions change mid-build]

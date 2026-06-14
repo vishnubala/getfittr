@@ -67,10 +67,15 @@ class ExerciseOut(BaseModel):
 
 
 class SessionCreate(BaseModel):
-    """Body for POST /api/sessions — start a manually-logged session."""
+    """Body for POST /api/sessions — start a session.
+
+    ``manually_entered`` defaults to 1 (historical backfill, the manual-log flow);
+    the live workout player sends 0 to mark a camera/coached session.
+    """
 
     date: str                 # ISO date string, e.g. "2026-06-08"
     session_type: str = "custom"
+    manually_entered: int = 1
 
 
 class SessionOut(BaseModel):
@@ -94,7 +99,7 @@ class SetCreate(BaseModel):
     set_number: int
     reps_completed: Optional[int] = None
     duration_seconds: Optional[int] = None  # for holds: plank, L-sit, etc.
-    rpe: int                                 # 1–10
+    rpe: Optional[int] = None                # 1–10; NULL until RPE capture (5b)
     notes: Optional[str] = None
 
 
@@ -108,7 +113,7 @@ class SetOut(BaseModel):
     set_number: int
     reps_completed: Optional[int] = None
     duration_seconds: Optional[int] = None
-    rpe: int
+    rpe: Optional[int] = None
     notes: Optional[str] = None
 
 

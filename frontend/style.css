@@ -834,3 +834,130 @@ textarea {
     letter-spacing: 1px;
     margin-bottom: 0.6rem;
 }
+
+/* ---- Workout — session player (Phase 2a Step 5a) ---- */
+
+/* Two buttons (Start Workout + Refresh) on the right of the plan header. */
+.plan-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* Active step / rest card: centred, generous touch targets. */
+.player-step,
+.player-rest {
+    text-align: center;
+}
+
+.player-step-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+
+.player-step-note {
+    margin-bottom: 0.5rem;
+}
+
+/* +/− stepper for reps / duration capture. */
+.stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin: 1rem 0;
+}
+
+.stepper-btn {
+    width: 2.6rem;
+    height: 2.6rem;
+    font-size: 1.4rem;
+    line-height: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.stepper-btn:hover {
+    border-color: var(--accent);
+    background: rgba(0, 212, 170, 0.08);
+}
+
+.stepper-value {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 2.5rem;
+}
+
+.stepper-unit {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+/* Live count-up timer shown while holding. */
+.hold-timer {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0.5rem 0;
+}
+
+/* Rest timer. */
+.rest-time {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 1rem;
+}
+
+/* On expiry the timer flips to a muted count-up + a brief flash cue. */
+.rest-time.rest-expired {
+    color: var(--muted);
+    animation: rest-flash 0.5s ease-in-out 3;
+}
+
+@keyframes rest-flash {
+    0%, 100% { color: var(--muted); }
+    50% { color: var(--accent); }
+}
+
+.rest-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.rest-config {
+    display: block;
+    font-size: 0.85rem;
+}
+
+.rest-config input {
+    width: 5rem;
+    margin-left: 0.5rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font: inherit;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+}
+
+/* Resume banner for an in-progress session. */
+.resume-banner {
+    border-left: 3px solid var(--accent);
+}
+
+.resume-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-top: 0.75rem;
+}

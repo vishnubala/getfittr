@@ -911,3 +911,92 @@ The plan is now visible and interactive in the browser, entirely against mock mo
 session on top of this: turning the displayed plan into an active workout in
 `#workout-active` — Start Set / End Set, RPE capture per set, and the first real
 use of `voice.js` for spoken cues.
+
+---
+## [Phase 2a · Step 5a] — Workout player state machine
+*2026-06-14*
+
+### What was built
+The Workout tab is now a player, not just a plan viewer. "Start Workout" creates a
+real session row, then the app walks the plan step by step — warm-up, skill,
+supersets (the two exercises alternated set by set), cool-down — with Start Set /
+End Set capturing reps or hold-seconds via a +/− stepper. Each logged set is saved
+to the database with **rpe = NULL** (RPE comes in 5b). The workout survives a page
+refresh (state in localStorage), and on returning the app offers Resume / Finish &
+save / Discard for an in-progress session. Three new backend routes support it:
+GET /api/sessions/open, DELETE /api/sessions/{id}, and
+GET /api/exercises/{id}/last-set.
+
+### New terms introduced
+- **State machine (the player)**: The workout is modelled as a list of ordered
+  "steps" plus a single integer **position** (`pos`) pointing at the current one.
+  Every action (End Set, Next, Skip) advances `pos`; the UI is always a pure
+  function of "which step are we on and in what sub-state". Thinking this way keeps a
+  multi-screen flow predictable instead of a tangle of show/hide flags.
+- **Flattening a nested plan**: The plan JSON is nested (supersets contain
+  exercises, each with several sets). The player "flattens" it once into a single
+  ordered array of atomic steps — e.g. a 3-set superset of two exercises becomes 6
+  steps (X1, Y1, X2, Y2, X3, Y3). Walking a flat list is far simpler than recursing
+  through the nested shape at every tap.
+- **localStorage**: A small key-value store the browser persists across reloads (and
+  tab closes), unlike normal JS variables which vanish on refresh. We keep the active
+  workout (`getfittr.activeWorkout`) and the user's custom rest length
+  (`getfittr.restSeconds`) there so a refresh mid-workout doesn't lose your place.
+- **Source of truth / reconciliation**: Two stores could disagree after a crash — the
+  DB (saved sets) and localStorage (position). We treat the **server as
+  authoritative**: on Resume, position is recomputed as "the step just after the
+  Nth logged set", where N comes from the DB, and the stored position is ignored for
+  that. This is what stops a set being saved twice if the app dies between the save
+  and the position write.
+- **Idempotency / duplicate-avoidance ordering**: We advance and persist `pos`
+  **only after** the set's POST returns 200 — never before. Combined with the
+  DB-derived resume above, a half-finished save can't replay the set.
+- **Route ordering (FastAPI)**: Routes match in declaration order. `/sessions/open`
+  had to be declared **before** `/sessions/{session_id}`; otherwise "open" gets
+  captured by the typed `{session_id}` route and fails int validation (422) instead
+  of reaching the open-session handler.
+- **Hard delete + foreign keys**: Discard removes the session for real. Because
+  `session_sets` references `sessions`, we delete the child rows first (FK-safe) then
+  the parent — otherwise the foreign-key constraint would block the delete.
+- **AudioContext unlocking**: Browsers start an `AudioContext` "suspended" until a
+  user gesture, to stop pages auto-playing sound. We create/resume it inside the
+  Start Workout click so the rest-timer expiry beep actually plays later.
+- **Optional chaining / nullish (`?.`, `??`)**: `set.rpe ?? "—"` shows a dash when
+  rpe is null; `el?.textContent` safely reads a node that might not exist. Small
+  guards that keep null values from rendering as the literal text "null" or throwing.
+
+### Why these decisions were made
+- **Session created on Start, not on plan fetch**: Fetching a plan is browsing;
+  starting is committing. Creating the session row only on "Start Workout" (with
+  `manually_entered = 0`) avoids littering the database with empty sessions from
+  plans the user looked at but never did.
+- **rpe saved as NULL now**: 5a deliberately omits RPE (that's 5b). Making the
+  `rpe` column optional end to end (request and response models) lets the player save
+  real sets immediately, and the History view renders the gap as "RPE —". The manual
+  log still sends an rpe, so nothing there breaks.
+- **Server is the source of truth for "open"**: A single GET tells us authoritatively
+  whether a workout is unfinished; localStorage only fills in the position. If
+  localStorage is stale (no open session) we clear it; if it points at a different
+  session we don't resume into the wrong one. This avoids the classic
+  "two sources of truth quietly diverge" bug.
+- **Rest only between training sets**: Bodyline warm-up holds are movement prep, not
+  training, so the 90s rest timer is suppressed for them and shown only for skill and
+  superset sets — matching how the routine is actually performed.
+- **Stepper seeded from history, never the top of the range**: Pre-filling the
+  upper bound of "5-8" would let an un-edited value falsely read as a 3×8 set (the
+  progression trigger). So Set 1 seeds from your last actual effort on that exercise
+  (or the range's lower bound if there's no history), and later sets seed from the
+  previous set — honest defaults the user nudges with +/−.
+
+### Known issue logged (for 5b)
+`skill_work` is logged as holds (`duration_seconds`), yet the progression rules
+group "strength/skill" under the rep-based 3×8 trigger. A caveat now sits beside that
+rule in CLAUDE.md and a Pending Idea (Phase 2b) tracks defining skill's real
+advancement signal (the hold rule, item 4). Voice cues remain a stub — the expiry
+cue is a plain WebAudio beep; spoken coaching is Step 5c.
+
+### What this enables
+There is now real, structured session data flowing in from actually *doing* a
+workout (not just backfilling history). Step 5b can layer RPE capture and local
+per-set feedback on top of the End Set flow, and Step 6's post-session summary has
+genuine per-set reps/holds to summarise.

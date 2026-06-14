@@ -194,6 +194,11 @@ HINGE: Romanian Deadlift → Single-Leg RDL → Nordic Curl
 
 1. Working rep range: **3 sets of 5–8 reps** for strength exercises
 2. **Progression trigger**: 3 consecutive sessions completing 3×8 at RPE ≤ 7 with no form flags
+   - ⚠️ **Skill caveat (resolve in 5b)**: `skill_work` (e.g. L-sit) is logged as
+     holds (`duration_seconds`), not reps, so this 3×8 *rep* trigger does not apply
+     directly to skill despite the "strength/skill" grouping used elsewhere. Skill
+     advances via the hold-progression rule (item 4). Reconcile when building the
+     Phase 2b progression engine — see Pending Ideas.
 3. **After progression**: drop to 3×5 of the harder variation and rebuild
 4. **Hold progressions** (plank, L-sit): build from 3×10s to 3×30s before advancing
 5. **Bodyline drills** (daily warm-up plank, hollow hold): NOT progressed. Hold once comfortably up to 60s. Do not increase beyond 60s — they serve as movement prep only.
@@ -623,6 +628,12 @@ This project doubles as a portfolio piece demonstrating:
   plain-English summary of the week — consistency, RPE trends, what
   progressed, what to watch. Delivered in the Workout section as a
   banner. Candidate for Phase 4 alongside the progress dashboard.
+- [Phase 2b] Skill progression signal: skill_work is logged as holds
+  (duration_seconds), but the progression rules group "strength/skill" under the
+  rep-based 3×8 trigger (see ⚠️ caveat beside Progression Rules item 2). The 2b
+  progression engine must define skill's actual advancement signal — almost
+  certainly the hold-progression rule (3×10s → 3×30s, item 4) keyed on
+  duration_seconds — and stop implying a rep trigger applies to skill.
 
 ---
 

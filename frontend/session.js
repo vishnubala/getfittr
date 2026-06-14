@@ -408,7 +408,7 @@ async function viewSession(sessionId) {
                         const effort = set.duration_seconds != null
                             ? `${set.duration_seconds}s`
                             : `${set.reps_completed ?? "–"} reps`;
-                        return `<li>Set ${set.set_number}: ${effort} · RPE ${set.rpe}</li>`;
+                        return `<li>Set ${set.set_number}: ${effort} · RPE ${set.rpe ?? "—"}</li>`;
                     })
                     .join("");
                 wrap.innerHTML =

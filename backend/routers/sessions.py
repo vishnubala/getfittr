@@ -84,6 +84,39 @@ def list_exercises(q: str | None = None, db=Depends(get_db)):
     ]
 
 
+@router.get("/exercises/{exercise_id}/last-set")
+def last_set_for_exercise(
+    exercise_id: int, exclude_session: int | None = None, db=Depends(get_db)
+):
+    """Return the most recent logged set for an exercise, or null.
+
+    Used by the workout player to seed the Set-1 stepper with the user's last
+    real effort on this exercise. ``exclude_session`` skips the in-progress
+    session so the current workout's own sets don't seed themselves. Returns
+    ``{"reps_completed": ..., "duration_seconds": ...}`` or ``null`` when there
+    is no prior set.
+    """
+    sql = (
+        "SELECT s.reps_completed, s.duration_seconds "
+        "FROM session_sets s "
+        "JOIN sessions se ON se.id = s.session_id "
+        "WHERE s.exercise_id = ?"
+    )
+    params: tuple = (exercise_id,)
+    if exclude_session is not None:
+        sql += " AND s.session_id != ?"
+        params += (exclude_session,)
+    sql += " ORDER BY se.date DESC, s.id DESC LIMIT 1"
+
+    row = db.execute(sql, params).fetchone()
+    if row is None:
+        return None
+    return {
+        "reps_completed": row["reps_completed"],
+        "duration_seconds": row["duration_seconds"],
+    }
+
+
 # ---------------------------------------------------------------------------
 # Sessions
 # ---------------------------------------------------------------------------
@@ -101,13 +134,18 @@ def _require_session(db, session_id: int):
 
 @router.post("/sessions", response_model=SessionOut)
 def create_session(payload: SessionCreate, db=Depends(get_db)):
-    """Start a manually-entered session and return it."""
+    """Start a session and return it.
+
+    start_time is set to now, so the session is "open" (no end_time yet) and
+    discoverable via GET /sessions/open. manually_entered comes from the payload
+    (1 = manual backfill, the default; 0 = the live workout player).
+    """
     now = datetime.now().isoformat()
     cur = db.execute(
         """INSERT INTO sessions
                (date, start_time, session_type, manually_entered, created_at)
-           VALUES (?, ?, ?, 1, ?)""",
-        (payload.date, now, payload.session_type, now),
+           VALUES (?, ?, ?, ?, ?)""",
+        (payload.date, now, payload.session_type, payload.manually_entered, now),
     )
     db.commit()
     row = db.execute(
@@ -192,6 +230,47 @@ def list_sessions(db=Depends(get_db)):
            ORDER BY s.date DESC, s.id DESC"""
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+# NOTE: this MUST come before GET /sessions/{session_id}. Routes match in
+# declaration order, and "open" would otherwise be captured by the {session_id}
+# route and fail int validation (422) instead of reaching this handler.
+@router.get("/sessions/open", response_model=SessionSummaryOut | None)
+def get_open_session(db=Depends(get_db)):
+    """Return the current open session (start_time set, no end_time) or null.
+
+    An "open" session is one the workout player started and hasn't finished. The
+    response is a summary with set_count/exercise_count so the resume banner can
+    decide which actions to offer (Resume / Finish & save / Discard).
+    """
+    row = db.execute(
+        """SELECT s.id, s.date, s.session_type, s.duration_minutes,
+                  s.overall_rpe, s.manually_entered,
+                  COUNT(DISTINCT ss.exercise_id) AS exercise_count,
+                  COUNT(ss.id) AS set_count
+           FROM sessions s
+           LEFT JOIN session_sets ss ON ss.session_id = s.id
+           WHERE s.start_time IS NOT NULL AND s.end_time IS NULL
+           GROUP BY s.id
+           ORDER BY s.id DESC
+           LIMIT 1"""
+    ).fetchone()
+    return dict(row) if row else None
+
+
+@router.delete("/sessions/{session_id}")
+def delete_session(session_id: int, db=Depends(get_db)):
+    """Hard-delete a session and its sets (used by Discard).
+
+    Removes the child session_sets first (FK-safe) then the session row, so a
+    discarded workout leaves History and every coaching/progression query. 404
+    if the session does not exist.
+    """
+    _require_session(db, session_id)
+    db.execute("DELETE FROM session_sets WHERE session_id = ?", (session_id,))
+    db.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+    db.commit()
+    return {"deleted": True}
 
 
 @router.get("/sessions/{session_id}", response_model=SessionDetailOut)

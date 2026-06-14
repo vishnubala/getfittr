@@ -71,15 +71,15 @@ Phase 2a — AI Coach (no RAG):
   ✅ Step 2: coach.py — Claude API wrapper + mock mode (MOCK_PLAN, lazy client, system prompt)
   ✅ Step 3: GET /api/coach/plan route + get_recent_sessions_for_coach() DB helper
   ✅ Step 4: Workout UI — plan display (workout.js, 4 states, cached, mock render)
-  [ ] Step 5a: Workout player state machine — Start Workout, sequence plan, Start/End Set, rep/duration capture, rest timer, open-session resume (sets saved rpe NULL)
+  ✅ Step 5a: Workout player — Start Workout, sequencer, Start/End Set + stepper, rest timer, localStorage resume, Resume/Finish/Discard (sets saved rpe NULL)
   [ ] Step 5b: RPE capture + local rule-based per-set feedback (no API call)
   [ ] Step 5c: voice.js — Web Speech API output
 Phase 2b — AI Coach (RAG):  [ ] NOT STARTED
 Phase 3 — The Eyes:   [ ] NOT STARTED
 Phase 4 — Polish:     [ ] NOT STARTED
 
-Last completed: Phase 2a Step 4 — Workout UI in workout.js: "Get Today's Plan" button fetches /api/coach/plan and renders the full plan (coach msg, warm-up, skill, supersets, cool-down) with 4 states (empty/loading/loaded/error) and in-memory caching
-Next task: Phase 2a Step 5a — workout player state machine (Start Workout creates session, sequence the plan, Start/End Set with editable capture, rest timer, open-session resume)
+Last completed: Phase 2a Step 5a — workout player (workout.js): Start Workout creates a manually_entered=0 session, flattened-plan sequencer with pos index, Start/End Set + /− stepper (history-seeded), rest timer (skill/supersets only), localStorage resume, Resume/Finish&save/Discard banner; new routes GET /sessions/open, DELETE /sessions/{id}, GET /exercises/{id}/last-set; sets saved rpe NULL
+Next task: Phase 2a Step 5b — RPE capture + local rule-based per-set feedback (writes rpe to the set; no API call)
 
 ---
 

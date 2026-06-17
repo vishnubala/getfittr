@@ -1000,3 +1000,61 @@ There is now real, structured session data flowing in from actually *doing* a
 workout (not just backfilling history). Step 5b can layer RPE capture and local
 per-set feedback on top of the End Set flow, and Step 6's post-session summary has
 genuine per-set reps/holds to summarise.
+
+---
+## [Phase 2a · Step 5a.1] — 5a hardening + RPE-scale reconciliation
+*2026-06-17*
+
+### What was built
+Four small, independent fixes that close loose ends from Step 5a — no schema
+changes, no RPE *capture* yet (that's 5b). The resume banner now ignores manual
+backfills, a failed manual save no longer leaves an orphan session in History, the
+superset flattener resolves a malformed "both fields" plan deterministically, and
+the manual-log RPE buttons now write the same numbers (5/7/9/10) as the player will.
+
+### New terms introduced
+- **Reps-wins precedence**: when a single exercise carries BOTH a `reps` and a
+  `seconds` value (which the plan schema says should never happen — it's reps XOR
+  seconds), the flattener now treats it as a reps exercise rather than guessing. A
+  defined tie-break beats silent misclassification.
+- **All-or-nothing save (rollback)**: a multi-step write (create session → post each
+  set → end session) that, on any failure partway, undoes the parts that did
+  succeed — here by deleting the just-created session — so the user never sees a
+  half-saved record. The classic database word for this is a *transaction*; we do it
+  manually in the browser because each step is a separate HTTP call.
+- **Best-effort cleanup**: the rollback DELETE is wrapped in its own try/catch that
+  swallows errors. If the cleanup itself fails, we don't want it to mask or replace
+  the original "Save failed" message the user actually needs to see.
+- **Canonical mapping**: one agreed source of truth for a value used in more than one
+  place. Here, the RPE-button → stored-number mapping (😌5 / 💪7 / 😤9 / 😵10) lives
+  in CLAUDE.md and both entry paths (manual log + player) now match it.
+
+### Why these decisions were made
+- **(a) Open-session query filters `manually_entered = 0`.** "Resume an open
+  workout" is a live-player concept. A manual backfill row also has a start_time, so
+  without this filter a manually-logged session that somehow lacked an end_time could
+  pop up as a resumable workout — meaningless for a backfill. Filtering at the query
+  is the narrowest fix: the banner is player-only by construction, not by hoping the
+  data is clean.
+- **(b) Manual save rolls back on failure.** Before this, a network blip after the
+  session row was created (but before its sets posted) left a real session in History
+  with zero or partial sets — confusing and hard to clean up by hand. Tracking the
+  created id in a `let` visible to the catch lets us delete it. We chose rollback over
+  "leave it and let the user retry" because a single-user local app should never
+  accumulate junk rows the user didn't intend.
+- **(c) Reps-wins over the old `seconds != null && reps == null` test.** The old test
+  classified "both present" as *not* a hold → it happened to fall through to reps, but
+  only by accident of the boolean. Making reps-wins explicit (and commenting why)
+  means the behaviour is intentional and documented against the CLAUDE.md schema rule,
+  not an emergent side effect someone could "fix" into a bug later.
+- **(d) RPE 5/7/9/10 everywhere.** The manual log shipped earlier with 3/6/8/10. The
+  player (5b) and the progression trigger both assume 5/7/9/10. Two scales writing to
+  one `rpe` column would make "RPE ≤ 7 counts toward progression" mean different
+  things depending on which screen logged the set. Reconciling now, before any real
+  data exists, avoids a migration later (old test rows are discarded, not migrated).
+
+### What this enables
+Step 5b can add RPE capture to the player knowing the manual log already writes the
+identical 5/7/9/10 values, so the progression logic reads one consistent scale. The
+resume banner and History are now robust to the edge cases (manual rows, failed
+saves) that would otherwise surface as confusing UI during 5b/6 testing.

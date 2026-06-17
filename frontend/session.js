@@ -163,7 +163,7 @@ function addSetRow(block, exercise) {
 
     const rpeGroup = document.createElement("div");
     rpeGroup.className = "rpe-group";
-    [["3", "😌"], ["6", "💪"], ["8", "😤"], ["10", "😵"]].forEach(([rpe, emoji]) => {
+    [["5", "😌"], ["7", "💪"], ["9", "😤"], ["10", "😵"]].forEach(([rpe, emoji]) => {
         const btn = document.createElement("button");
         btn.className = "rpe-btn";
         btn.dataset.rpe = rpe;
@@ -279,6 +279,9 @@ async function saveSession() {
     const data = collectSessionData();
     if (!data) return;
 
+    // Track the created session id so a mid-save failure can roll it back, keeping
+    // the manual log all-or-nothing (no partial/orphan session left in History).
+    let createdId = null;
     try {
         const createRes = await fetch("/api/sessions", {
             method: "POST",
@@ -287,6 +290,7 @@ async function saveSession() {
         });
         if (!createRes.ok) throw new Error(`create failed (${createRes.status})`);
         const session = await createRes.json();
+        createdId = session.id;
 
         for (const exercise of data.exercises) {
             for (const set of exercise.sets) {
@@ -310,6 +314,15 @@ async function saveSession() {
         await loadSessions();
         showToast("Session saved ✓");
     } catch (err) {
+        // Best-effort rollback of the half-saved session so it never lingers in
+        // History. Cleanup must never throw — swallow any error from the delete.
+        if (createdId != null) {
+            try {
+                await fetch(`/api/sessions/${createdId}`, { method: "DELETE" });
+            } catch (cleanupErr) {
+                /* ignore — the failed save is already being surfaced below */
+            }
+        }
         showToast("Save failed — try again");
     }
 }

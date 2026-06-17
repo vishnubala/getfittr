@@ -251,6 +251,7 @@ def get_open_session(db=Depends(get_db)):
            FROM sessions s
            LEFT JOIN session_sets ss ON ss.session_id = s.id
            WHERE s.start_time IS NOT NULL AND s.end_time IS NULL
+                 AND s.manually_entered = 0
            GROUP BY s.id
            ORDER BY s.id DESC
            LIMIT 1"""

@@ -333,13 +333,17 @@ function flattenPlan(plan) {
         for (let setIdx = 0; setIdx < maxSets; setIdx++) {
             exs.forEach((ex) => {
                 if (setIdx >= (ex.sets || 0)) return;  // unequal sets: shorter drops out
-                const isHold = ex.seconds != null && ex.reps == null;
                 const step = {
                     phase: "superset", pair: ss.pair, logged: true,
                     exercise_id: ex.exercise_id, name: ex.name, note: ex.note,
                     set_number: nextSetNo(ex.exercise_id),
                 };
-                if (isHold) {
+                // Reps-wins precedence (plan schema is reps XOR seconds, per CLAUDE.md):
+                // a malformed plan carrying both degrades to reps, not a misclassified hold.
+                if (ex.reps != null) {
+                    step.kind = "reps";
+                    step.range = parseRange(ex.reps);
+                } else if (ex.seconds != null) {
                     step.kind = "hold";
                     step.seconds = ex.seconds;
                 } else {

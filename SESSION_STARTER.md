@@ -72,13 +72,14 @@ Phase 2a — AI Coach (no RAG):
   ✅ Step 3: GET /api/coach/plan route + get_recent_sessions_for_coach() DB helper
   ✅ Step 4: Workout UI — plan display (workout.js, 4 states, cached, mock render)
   ✅ Step 5a: Workout player — Start Workout, sequencer, Start/End Set + stepper, rest timer, localStorage resume, Resume/Finish/Discard (sets saved rpe NULL)
+  ✅ Step 5a.1: 5a hardening — open-session is player-only, manual save rolls back on failure, superset reps-wins flatten, manual RPE buttons 5/7/9/10
   [ ] Step 5b: RPE capture + local rule-based per-set feedback (no API call)
   [ ] Step 5c: voice.js — Web Speech API output
 Phase 2b — AI Coach (RAG):  [ ] NOT STARTED
 Phase 3 — The Eyes:   [ ] NOT STARTED
 Phase 4 — Polish:     [ ] NOT STARTED
 
-Last completed: Phase 2a Step 5a — workout player (workout.js): Start Workout creates a manually_entered=0 session, flattened-plan sequencer with pos index, Start/End Set + /− stepper (history-seeded), rest timer (skill/supersets only), localStorage resume, Resume/Finish&save/Discard banner; new routes GET /sessions/open, DELETE /sessions/{id}, GET /exercises/{id}/last-set; sets saved rpe NULL
+Last completed: Phase 2a Step 5a.1 — 5a hardening + RPE-scale reconciliation: GET /sessions/open filters manually_entered=0 (player-only); manual saveSession() rolls back the created session on a mid-save failure (no orphan rows); flattenPlan superset branch uses reps-wins precedence; manual-log RPE buttons store 5/7/9/10 (was 3/6/8/10) to match the canonical CLAUDE.md mapping
 Next task: Phase 2a Step 5b — RPE capture + local rule-based per-set feedback (writes rpe to the set; no API call)
 
 ---

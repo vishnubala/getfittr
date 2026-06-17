@@ -473,6 +473,10 @@ cool_down). Plan schema note: within `warm_up`, items WITH an `exercise_id` are
 trackable bodyline drills (plank, hollow hold, side plank — logged as holds);
 items WITHOUT an `exercise_id` are dynamic stretches (shoulder rolls, hip circles,
 leg swings) rendered as instruction text only and never logged.
+Within `skill_work` and `supersets`, each exercise carries EITHER `reps` (strength,
+e.g. "5-8") OR `seconds` (a hold), never both. The frontend flattener applies
+reps-wins precedence (reps present → reps step; else seconds → hold step), so a
+malformed plan carrying both degrades to reps rather than misclassifying.
 
 ### Phase 2a: Coaching without RAG
 Steps:
@@ -481,6 +485,13 @@ Steps:
 3. GET /api/coach/plan — profile + recent history → structured workout plan
 4. Workout section UI: "Get Today's Plan" button, displays the plan
 5a: Workout player state machine — Start Workout (creates session), sequence through the plan (warm-up holds, skill, supersets, cool-down), Start Set / End Set, editable rep/duration capture, rest timer, open-session resume. Sets saved with rpe NULL.
+5a.1: 5a hardening + RPE-scale reconciliation (no new tables, no RPE capture):
+  (a) GET /api/sessions/open filters manually_entered = 0 (resume banner is
+      player-only, immune to manual-log state);
+  (b) manual log saveSession() deletes its just-created session on a mid-save
+      failure (no partial/orphan rows in History);
+  (c) flattenPlan superset branch uses reps-wins precedence for hold-vs-reps;
+  (d) session.js RPE buttons store 5/7/9/10 (was 3/6/8/10) to match CLAUDE.md.
 5b: RPE capture + local rule-based per-set feedback (no API call), writing the rpe value to the set.
 5c: voice.js — Web Speech API output.
 6. Post-session summary: session end → Claude summary + next-session note
@@ -586,6 +597,10 @@ This project doubles as a portfolio piece demonstrating:
   the entire rest period regardless of the timer.
 - Reps at End Set are pre-filled with the plan's target and remain editable.
 - Voice on/off toggle state persists in localStorage (no user_profile column).
+- Persistence is local-only SQLite. Durability via a transaction-safe SQLite backup
+  (.backup / VACUUM INTO) on a platform-appropriate schedule; never git, never the
+  public repo.
+- RPE canonical mapping is 5/7/9/10 across every entry path (manual log + player).
 
 ## Change Log
 [Add entries here when decisions change mid-build]
@@ -605,6 +620,22 @@ This project doubles as a portfolio piece demonstrating:
 - 2026-06-08: Phase 2b embedding model updated to `all-MiniLM-L6-v2` (HuggingFace
   sentence-transformers), superseding the earlier `BAAI/bge-small` note in the Tech
   Stack table and RAG Pipeline section. Chroma vector store unchanged.
+- 2026-06-14: Persistence & backup policy. Storage stays LOCAL SQLite — no cloud,
+  no accounts (consistent with the single-user design). "Safe and recoverable" is
+  handled by backups, not architecture: a transaction-safe snapshot of
+  data/getfittr.db via SQLite's own backup (`sqlite3 data/getfittr.db ".backup
+  <dest>"` or `VACUUM INTO`), never a naive copy of a live DB. Scheduling is
+  platform-specific (Task Scheduler on Windows, cron/launchd on Linux/macOS, or an
+  in-app job) — not Windows-only. getfittr.db is gitignored and the repo is public,
+  so git is NEVER the backup. Multi-device sharing is an OPEN design question (see
+  Pending Ideas), decided at the relevant phase — not locked to any mechanism.
+- 2026-06-14: RPE scale reconciled to 5/7/9/10 (Easy=5, Good=7, Hard=9, Failed=10)
+  across ALL entry paths. The manual log (session.js) previously stored 3/6/8/10;
+  corrected in Phase 2a Step 5a.1 so the player RPE capture (5b) and the manual log
+  write identical numbers per button. Qualitative progression outcome unchanged
+  (Easy+Good ≤7 count toward the 3×8 trigger under both scales). Pre-existing manual
+  sets used 3/6/8/10 — treated as test data, not migrated (a one-time remap
+  3→5 / 6→7 / 8→9 is trivial if real data ever needs it).
 
 ## Pending Ideas
 [Dump ideas here mid-session — review between phases, not during them]
@@ -634,6 +665,32 @@ This project doubles as a portfolio piece demonstrating:
   progression engine must define skill's actual advancement signal — almost
   certainly the hold-progression rule (3×10s → 3×30s, item 4) keyed on
   duration_seconds — and stop implying a rep trigger applies to skill.
+- [Phase 2a, after 5b] Persistence & recommendation history: a `workout_plans`
+  table storing EVERY generated plan (date, plan_json, created_at), with sessions
+  linked via a nullable plan_id FK set on Start Workout. Captures all AI
+  recommendations (started or not) for future analytics; lets Resume rebuild the
+  plan from the DB instead of localStorage (closes the localStorage-lost-mid-session
+  resume gap); foundation for whatever multi-device mechanism is later chosen.
+  Design as its OWN step — do not fold into 5a.1.
+- [Phase 4 — OPEN design question, revisit then] Multi-device data sharing. Goal:
+  carry profile + sessions + sets + plans between a user's own devices, still
+  no-auth/no-accounts. Candidate approaches, none locked:
+    - Manual file export/import (dump state to a portable file / copy the .db),
+      carried by the user. Fully local; portability not sync; import overwrites, so
+      editing two devices without syncing loses one side.
+    - Code/relay sync (one device generates a code another device enters to pull the
+      latest state). More convenient, but a code can't move data by itself — it
+      implies an intermediary the data passes through (a relay/server or a shared
+      cloud location), a real departure from "fully local." Weigh whether acceptable.
+    - Local-network transfer (devices on the same LAN hand the file directly) — no
+      intermediary, but needs both devices present together.
+  Pick the mechanism at Phase 4 against the constraints then. Whatever wins, warn on
+  import when incoming state looks older/smaller than existing. Never point two
+  machines at one synced .db file (SQLite corrupts under concurrent writes).
+- [Phase 4 / utility] Scheduled backup: a platform-appropriate job (Task Scheduler
+  on Windows, cron/launchd on Linux/macOS, or an in-app scheduler) running a
+  transaction-safe SQLite backup (.backup / VACUUM INTO) to an external drive or
+  OS-synced folder. Not a naive file copy (a live-DB copy can be torn mid-write).
 
 ---
 

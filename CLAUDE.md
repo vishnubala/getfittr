@@ -636,6 +636,9 @@ This project doubles as a portfolio piece demonstrating:
   (Easy+Good ≤7 count toward the 3×8 trigger under both scales). Pre-existing manual
   sets used 3/6/8/10 — treated as test data, not migrated (a one-time remap
   3→5 / 6→7 / 8→9 is trivial if real data ever needs it).
+- 2026-06-18: 5b: player now captures RPE before the set POST (skill/superset only;
+  warm-up holds stay rpe NULL); hold sets now log the measured elapsed time, not the
+  seeded target.
 
 ## Pending Ideas
 [Dump ideas here mid-session — review between phases, not during them]

@@ -213,6 +213,39 @@ let _audioCtx = null;                  // unlocked on the Start Workout gesture
 let _holdTimer = null, _holdElapsed = 0;
 let _rest = null;
 
+// 5b — RPE capture state.
+let _pendingValue = null;              // value stashed at End Set, written by the RPE tap
+let _holdUserTookOver = false;         // true once the user taps +/− on a hold → stops auto-fill
+
+// Canonical RPE buttons (CLAUDE.md mapping): the tapped button identifies both the
+// stored number and the feedback rating — feedback keys on `rating`, never the raw rpe.
+const RPE_OPTIONS = [
+    { rpe: 5, emoji: "😌", rating: "easy" },
+    { rpe: 7, emoji: "💪", rating: "good" },
+    { rpe: 9, emoji: "😤", rating: "hard" },
+    { rpe: 10, emoji: "😵", rating: "failed" },
+];
+
+// Local per-set feedback, keyed on (kind, rating). No interpolation of the raw number.
+const FEEDBACK = {
+    reps: {
+        easy: "Easy — add a rep or two next time.",
+        good: "Good — right in the training zone.",
+        hard: "Hard — hold these reps and stay strict on form.",
+        failed: "Failed — drop the reps next set and reset your form.",
+    },
+    hold: {
+        easy: "Easy — add a few seconds next time.",
+        good: "Good — right in the training zone.",
+        hard: "Hard — hold this duration and keep tight form.",
+        failed: "Failed — shorten the hold next time and reset.",
+    },
+};
+function feedbackFor(kind, rating) {
+    const table = FEEDBACK[kind === "hold" ? "hold" : "reps"];
+    return (table && table[rating]) || "";
+}
+
 // ---- audio (item 3): unlock inside the user gesture so the beep isn't blocked
 function unlockAudio() {
     try {
@@ -413,6 +446,7 @@ function renderActive(mode) {
     let body;
     if (step.kind === "stretch") body = stretchBody(step);
     else if (step.kind === "text") body = textBody(step);
+    else if (mode === "rpe") body = rpeBody(step);
     else if (mode === "capture") body = captureBody(step);
     else body = startBody(step);
 
@@ -429,6 +463,8 @@ function renderActive(mode) {
         document.getElementById("next-step-btn").addEventListener("click", advanceDisplay);
     } else if (step.kind === "text") {
         document.getElementById("finish-workout-btn").addEventListener("click", finishWorkout);
+    } else if (mode === "rpe") {
+        bindRpe(step);
     } else if (mode === "capture") {
         bindCapture(step);
     } else {
@@ -466,13 +502,12 @@ function startBody(step) {
 }
 
 function captureBody(step) {
+    // For holds the stepper IS the live readout (the timer drives #step-value); there
+    // is no separate timer display. The unit span renders "s"/"reps" beside the value.
     const unit = step.kind === "hold" ? "s" : "reps";
-    const timer = step.kind === "hold"
-        ? `<div class="hold-timer" id="hold-timer">0s</div>` : "";
     return `
         <div class="player-step-name">${esc(step.name)}</div>
         <p class="muted">Set ${step.set_number}</p>
-        ${timer}
         <div class="stepper">
             <button class="stepper-btn" id="step-minus" aria-label="decrease">−</button>
             <span class="stepper-value" id="step-value">…</span>
@@ -485,15 +520,61 @@ function captureBody(step) {
 
 async function bindCapture(step) {
     const valEl = document.getElementById("step-value");
-    const read = () => parseInt(valEl.textContent, 10) || 1;
-    const write = (v) => { valEl.textContent = Math.max(1, v); };
-    document.getElementById("step-minus").addEventListener("click", () => write(read() - 1));
-    document.getElementById("step-plus").addEventListener("click", () => write(read() + 1));
+    // Floor is kind-aware: a hold can legitimately read 0 (just started); reps floor at 1.
+    // read() uses a finite-check so a genuine 0 survives (a plain `|| 1` would clobber it).
+    const floor = step.kind === "hold" ? 0 : 1;
+    const read = () => {
+        const n = parseInt(valEl.textContent, 10);
+        return Number.isFinite(n) ? n : floor;
+    };
+    const write = (v) => { valEl.textContent = Math.max(floor, v); };
+    const bump = (d) => {
+        if (step.kind === "hold") _holdUserTookOver = true;  // manual value now sticks
+        write(read() + d);
+    };
+    document.getElementById("step-minus").addEventListener("click", () => bump(-1));
+    document.getElementById("step-plus").addEventListener("click", () => bump(1));
     document.getElementById("end-set-btn")
         .addEventListener("click", () => endSet(step, read()));
-    if (step.kind === "hold") startHoldTimer();
-    // Seed the stepper (async, crash-proof — item 7).
-    write(await seedValue(step));
+
+    if (step.kind === "hold") {
+        _holdUserTookOver = false;
+        write(0);                       // start at 0; the timer drives it up live
+        startHoldTimer();
+    } else {
+        write(await seedValue(step));   // reps: seed from history/target (crash-proof)
+    }
+}
+
+// RPE sub-state (5b): shown after End Set for skill/superset sets. Tapping a pill is
+// the write trigger — the set is POSTed with that rpe. Reuses the global .rpe-group /
+// .rpe-btn pill styles; .player-rpe centers the row.
+function rpeBody(step) {
+    const pills = RPE_OPTIONS.map((o) =>
+        `<button class="rpe-btn" data-rpe="${o.rpe}" data-rating="${o.rating}">${o.emoji}</button>`
+    ).join("");
+    return `
+        <div class="player-step-name">${esc(step.name)}</div>
+        <p class="muted">Set ${step.set_number} · How hard was that set?</p>
+        <div class="rpe-group player-rpe">${pills}</div>
+        <p class="form-status error hidden" id="set-error">Couldn't save — tap a rating to retry.</p>`;
+}
+
+function bindRpe(step) {
+    const pills = activeHost().querySelectorAll(".player-rpe .rpe-btn");
+    pills.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            pills.forEach((b) => { b.disabled = true; });  // no double-POST
+            saveSet(step, _pendingValue, Number(btn.dataset.rpe), btn.dataset.rating);
+        });
+    });
+}
+
+// Re-enable the RPE pills after a failed save so the user can retry. No-op when the
+// RPE sub-state isn't on screen (e.g. the warm-up-hold save path).
+function enableRpeButtons() {
+    activeHost().querySelectorAll(".player-rpe .rpe-btn")
+        .forEach((b) => { b.disabled = false; });
 }
 
 // Set 1 → most recent value for this exercise from a prior session (last-set
@@ -517,24 +598,41 @@ async function seedValue(step) {
     return step.kind === "hold" ? (step.seconds || 1) : (step.range ? step.range.low : 1);
 }
 
+// Drives the live hold count straight into the stepper value (the unit span shows
+// "s"). Once the user takes over with +/−, the tick stops writing but keeps running
+// invisibly — End Set reads whatever is in the stepper.
 function startHoldTimer() {
     stopHoldTimer();
     _holdElapsed = 0;
-    const el = document.getElementById("hold-timer");
     _holdTimer = setInterval(() => {
         _holdElapsed += 1;
-        if (el) el.textContent = `${_holdElapsed}s`;
+        if (_holdUserTookOver) return;
+        const el = document.getElementById("step-value");
+        if (el) el.textContent = `${_holdElapsed}`;
     }, 1000);
 }
 function stopHoldTimer() {
     if (_holdTimer) { clearInterval(_holdTimer); _holdTimer = null; }
 }
 
-// End Set: save, THEN (item 4) advance pos + persist — only after the POST 200,
-// so a crash mid-save can't replay/duplicate the set on resume.
-async function endSet(step, value) {
+// End Set forks (5b): RPE-eligible sets (skill/superset) stash the captured value and
+// open the RPE sub-state — the set isn't written until a rating is tapped. Warm-up
+// bodyline holds are not RPE-eligible: they save immediately with rpe = null.
+function endSet(step, value) {
     stopHoldTimer();
-    const body = { exercise_id: step.exercise_id, set_number: step.set_number, rpe: null };
+    const rpeEligible = step.phase === "skill_work" || step.phase === "superset";
+    if (rpeEligible) {
+        _pendingValue = value;
+        renderActive("rpe");
+    } else {
+        saveSet(step, value, null, null);  // warm-up hold: write now, no RPE/feedback
+    }
+}
+
+// Shared save path: POST the set, THEN (5a invariant) advance pos + persist — only
+// after the 200, so a crash mid-save can't replay/duplicate the set on resume.
+async function saveSet(step, value, rpe, rating) {
+    const body = { exercise_id: step.exercise_id, set_number: step.set_number, rpe };
     if (step.kind === "hold") body.duration_seconds = value;
     else body.reps_completed = value;
 
@@ -548,17 +646,23 @@ async function endSet(step, value) {
     } catch (e) {
         const err = document.getElementById("set-error");
         if (err) err.classList.remove("hidden");
-        return;  // stay on the step; never pre-advance
+        enableRpeButtons();  // re-enable the pills so the user can retry (no-op if absent)
+        return;              // stay on the step; never pre-advance
     }
 
     _player.lastByExercise[step.exercise_id] = value;
     _player.pos += 1;
     persistPlayer();
 
-    // Rest only between training sets (item 6) — not after warm-up bodyline holds.
-    const restApplies = step.phase === "skill_work" || step.phase === "superset";
-    if (restApplies && _player.pos < _player.steps.length) renderRest();
-    else renderActive();
+    // Rest + feedback only between training sets — not after warm-up bodyline holds.
+    const trainingSet = step.phase === "skill_work" || step.phase === "superset";
+    if (trainingSet) {
+        const feedback = feedbackFor(step.kind, rating);
+        if (_player.pos < _player.steps.length) renderRest(feedback);
+        else renderFinalFeedback(feedback);  // rare: training set is last (no cool_down)
+    } else {
+        renderActive();  // warm-up hold: advance, no feedback
+    }
 }
 
 function advanceDisplay() {
@@ -569,7 +673,8 @@ function advanceDisplay() {
 
 // Rest screen: countdown from the custom default, Skip, and a "Start Next Set"
 // that is live the whole time. On expiry: beep + flash + flip to a count-up.
-function renderRest() {
+// `feedback` (5b) is the per-set message shown above the countdown; omitted if empty.
+function renderRest(feedback) {
     const rs = getRestSeconds();
     activeHost().innerHTML = `
         <div class="section-header">
@@ -577,6 +682,7 @@ function renderRest() {
             <button id="exit-workout-btn" class="btn-text">Exit</button>
         </div>
         <div class="card player-rest">
+            ${feedback ? `<p class="player-feedback">${esc(feedback)}</p>` : ""}
             <div class="rest-time" id="rest-time">${rs}s</div>
             <div class="rest-actions">
                 <button id="start-next-btn" class="btn-primary">Start Next Set</button>
@@ -615,6 +721,25 @@ function startRestCountdown(total) {
 }
 function stopRest() {
     if (_rest) { clearInterval(_rest); _rest = null; }
+}
+
+// Edge case: the last logged set is a training set with no following step (a plan
+// without a cool_down). pos is already past the end, so we can't lean on the rest
+// screen's "Start Next Set" to surface the feedback — show it here with a Finish
+// button that completes the session (renderActive would finish, but this keeps the
+// last set's feedback visible until the user acts).
+function renderFinalFeedback(feedback) {
+    showActiveView();
+    activeHost().innerHTML = `
+        <div class="section-header">
+            <span class="muted">Done</span>
+        </div>
+        <div class="card player-step">
+            ${feedback ? `<p class="player-feedback">${esc(feedback)}</p>` : ""}
+            <p class="form-status error hidden" id="finish-error">Couldn't finish — tap Finish Workout to retry.</p>
+            <button id="finish-workout-btn" class="btn-primary">Finish Workout</button>
+        </div>`;
+    document.getElementById("finish-workout-btn").addEventListener("click", finishWorkout);
 }
 
 // Leave the player but keep the session open in the DB; the banner takes over.

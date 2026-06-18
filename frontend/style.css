@@ -899,12 +899,17 @@ textarea {
     font-size: 0.9rem;
 }
 
-/* Live count-up timer shown while holding. */
-.hold-timer {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--text);
-    margin: 0.5rem 0;
+/* RPE pill row inside the player (5b). .rpe-group sets the flex; this centers it. */
+.player-rpe {
+    margin-top: 0.75rem;
+    justify-content: center;
+}
+
+/* Per-set feedback line (5b): shown above the rest countdown / on the final card. */
+.player-feedback {
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
 }
 
 /* Rest timer. */

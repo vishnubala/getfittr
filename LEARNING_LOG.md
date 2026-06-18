@@ -1058,3 +1058,67 @@ Step 5b can add RPE capture to the player knowing the manual log already writes 
 identical 5/7/9/10 values, so the progression logic reads one consistent scale. The
 resume banner and History are now robust to the edge cases (manual rows, failed
 saves) that would otherwise surface as confusing UI during 5b/6 testing.
+
+---
+## [Phase 2a · Step 5b] — RPE capture + local per-set feedback + measured hold value
+*2026-06-18*
+
+### What was built
+The workout player now captures how hard each working set felt and shows a short
+coaching line in response — without any AI call. For skill and superset sets, "End
+Set" no longer writes the set; it opens a four-button RPE prompt, and *tapping a
+button* is what writes the set (now with a real rpe) and then shows a one-line
+feedback message on the rest screen. Separately, every hold (warm-up bodyline holds
+included) now saves the time the count-up timer actually measured, instead of the
+pre-filled target. Frontend only — no backend, model, or schema change.
+
+### New terms introduced
+- **Sub-state**: a screen the player shows *within* a single step. The step itself
+  (e.g. "Tuck L-sit, set 1") doesn't change; we just swap the card's contents from
+  the capture view (stepper) to the RPE view (four buttons) and back. It's a smaller
+  version of the same state-machine idea the whole player already uses.
+- **Write trigger**: the single user action that commits data. Before 5b the trigger
+  was "End Set"; now, for RPE-eligible sets, it's "tap a rating." Naming the one
+  action that POSTs keeps the before/after-POST safety reasoning crisp.
+- **Rating identity vs. raw number**: the feedback text is chosen by *which button*
+  was pressed (its `rating`: easy/good/hard/failed), not by inspecting the stored
+  integer (5/7/9/10). The two happen to correspond, but keying on the button means
+  the wording can never drift if the numbers are ever remapped.
+- **Take-over flag**: a boolean (`_holdUserTookOver`) that flips the first time the
+  user nudges a hold's +/− stepper. Until then the running timer auto-fills the
+  stepper live; after, the timer stops writing so the user's manual correction sticks
+  (the timer keeps counting invisibly, but the stepper is now theirs).
+- **Measured value (Option B)**: the saved hold duration is the elapsed time the timer
+  measured, not the plan's target. The stepper *is* the live readout — there's no
+  longer a separate timer display.
+
+### Why these decisions were made
+- **RPE is captured before the POST, not after.** A set is only written once the user
+  taps a rating, so the row never exists with a placeholder rpe that has to be patched
+  later. This preserves the 5a "advance + persist only after a 200" invariant: a crash
+  while the RPE buttons are showing leaves nothing in the DB, and on resume the player
+  lands back on that step to redo it (verified). The alternative — write at End Set,
+  then UPDATE with the rpe — would reintroduce a half-written row, exactly what 5a.1
+  worked to eliminate.
+- **Feedback is local, keyed on (rating, kind).** The decision log already fixed that
+  per-set feedback is template-based, not an API call (cost + offline). Keying on the
+  button's rating and the step kind (reps vs hold) gives four short, correct lines per
+  kind with zero interpolation of the raw number — so "Hard" on a hold says "hold this
+  duration," while "Hard" on reps says "hold these reps."
+- **Warm-up holds stay rpe = null but still measure.** RPE-eligibility reuses the exact
+  predicate the rest timer already uses (`phase` is skill_work or superset). Bodyline
+  warm-up holds are movement prep, not training, so prompting for effort there would be
+  noise — but there's no reason to keep saving a fake target when we have the real
+  elapsed time, so the measured-value change applies to *all* holds.
+- **The stepper became the single hold readout.** 5a had two numbers on screen (a
+  timer display and a target-seeded stepper) that disagreed. Making the timer drive the
+  stepper directly means one number that is both the live count and the value that
+  saves — simpler, and it removes a class of "which number is right?" confusion. The
+  old `#hold-timer` element and its `.hold-timer` CSS are gone.
+
+### What this enables
+Sets now carry the two signals the Phase 2b progression engine needs: a real rpe
+(the 3×8 @ RPE≤7 trigger can finally be evaluated) and an honest hold duration (the
+3×10s→3×30s hold-progression rule has real numbers to read). Step 5c (voice) can
+speak the same feedback line this step renders, and Step 6's post-session summary now
+has rated, measured sets to summarise.

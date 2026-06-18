@@ -73,14 +73,14 @@ Phase 2a — AI Coach (no RAG):
   ✅ Step 4: Workout UI — plan display (workout.js, 4 states, cached, mock render)
   ✅ Step 5a: Workout player — Start Workout, sequencer, Start/End Set + stepper, rest timer, localStorage resume, Resume/Finish/Discard (sets saved rpe NULL)
   ✅ Step 5a.1: 5a hardening — open-session is player-only, manual save rolls back on failure, superset reps-wins flatten, manual RPE buttons 5/7/9/10
-  [ ] Step 5b: RPE capture + local rule-based per-set feedback (no API call)
+  ✅ Step 5b: RPE capture (skill/superset; tap writes the set) + local per-set feedback + measured hold value (all holds save elapsed, not target)
   [ ] Step 5c: voice.js — Web Speech API output
 Phase 2b — AI Coach (RAG):  [ ] NOT STARTED
 Phase 3 — The Eyes:   [ ] NOT STARTED
 Phase 4 — Polish:     [ ] NOT STARTED
 
-Last completed: Phase 2a Step 5a.1 — 5a hardening + RPE-scale reconciliation: GET /sessions/open filters manually_entered=0 (player-only); manual saveSession() rolls back the created session on a mid-save failure (no orphan rows); flattenPlan superset branch uses reps-wins precedence; manual-log RPE buttons store 5/7/9/10 (was 3/6/8/10) to match the canonical CLAUDE.md mapping
-Next task: Phase 2a Step 5b — RPE capture + local rule-based per-set feedback (writes rpe to the set; no API call)
+Last completed: Phase 2a Step 5b — RPE capture + local feedback + measured hold value (workout.js): skill/superset End Set opens a 4-pill RPE prompt (tap writes the set with rpe 5/7/9/10, before-POST invariant kept) and shows a local feedback line on the rest screen; warm-up holds still save rpe NULL; ALL holds now save the timer-measured elapsed value (stepper is the sole live readout, +/− takes over from the timer); #hold-timer removed
+Next task: Phase 2a Step 5c — voice.js (Web Speech API output; speak coach_message + the per-set feedback line)
 
 ---
 

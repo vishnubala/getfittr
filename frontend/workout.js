@@ -733,12 +733,14 @@ function renderFinalFeedback(feedback) {
     activeHost().innerHTML = `
         <div class="section-header">
             <span class="muted">Done</span>
+            <button id="exit-workout-btn" class="btn-text">Exit</button>
         </div>
         <div class="card player-step">
             ${feedback ? `<p class="player-feedback">${esc(feedback)}</p>` : ""}
             <p class="form-status error hidden" id="finish-error">Couldn't finish — tap Finish Workout to retry.</p>
             <button id="finish-workout-btn" class="btn-primary">Finish Workout</button>
         </div>`;
+    document.getElementById("exit-workout-btn").addEventListener("click", exitToPlan);
     document.getElementById("finish-workout-btn").addEventListener("click", finishWorkout);
 }
 
